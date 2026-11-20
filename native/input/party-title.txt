@@ -1,0 +1,13 @@
+# Wii Party: A and B together, a few times, once the title screen takes input; then A.
+3600 A+B
+3640 -
+4200 A+B
+4240 -
+4800 A+B
+4840 -
+5400 A
+5420 -
+6000 A
+6020 -
+6600 A
+6620 -

@@ -1,0 +1,3 @@
+# Wii Party: HOME, to check buttons reach the game at all.
+4000 HOME
+4040 -

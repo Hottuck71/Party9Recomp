@@ -1,0 +1,30 @@
+# Game functions replaced by host code in native/src/main.c, for Wii Party (USA, SUPE01). One "address name" per line.
+# Found from ResortRecomp's list by matching function bodies (scripts/port_addresses.py).
+8013CB10 Link
+8013D050 OSUnlink
+80137680 __OSInitAudioSystem
+80137850 __OSStopAudioSystem
+8016A440 OSReport
+8013AB60 OSFatal
+8018D250 WUDInit
+801606D0 __AXOutInitDSP
+801998A0 GKI_getbuf
+801A2058 BTA_HhSendData
+801A21FC BluetoothTick
+80182DA0 MotionPlusCheck
+80160590 AICallbackWatch
+80110F20 SoundStartWatch
+800FC960 SoundStartedWatch
+8016A1E0 DSPCheckMailToDSP
+8016A220 DSPSendMailToDSP
+80137940 DCInvalidateRange
+80137970 DCFlushRange
+801379A0 DCStoreRange
+801379D0 DCFlushRangeNoSync
+80137A00 DCStoreRangeNoSync
+80137A30 DCZeroRange
+80137A90 ICInvalidateRange
+800043C4 memcpy
+801CC76C memmove
+80004714 memset
+8005CE90 Force60Check

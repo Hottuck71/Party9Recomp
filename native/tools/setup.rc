@@ -1,0 +1,34 @@
+// Resources for PartyRecomp-<version>-Setup.exe: its manifest (no administrator rights, modern controls) and version
+// details. See setup.c.
+#include <winver.h>
+
+1 24 "setup.manifest"
+
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION 0, 1, 0, 0
+PRODUCTVERSION 0, 1, 0, 0
+FILEFLAGSMASK VS_FFI_FILEFLAGSMASK
+FILEFLAGS 0
+FILEOS VOS_NT_WINDOWS32
+FILETYPE VFT_APP
+FILESUBTYPE 0
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904B0"
+        BEGIN
+            VALUE "CompanyName", "Lane Carle (crazyman12)"
+            VALUE "FileDescription", "PartyRecomp Setup"
+            VALUE "FileVersion", "0.1.0.0"
+            VALUE "InternalName", "PartyRecomp-Setup"
+            VALUE "LegalCopyright", "PartyRecomp is free software (GPL-3.0). Wii Party is Nintendo's; no part of it is included."
+            VALUE "OriginalFilename", "PartyRecomp-Setup.exe"
+            VALUE "ProductName", "PartyRecomp"
+            VALUE "ProductVersion", "0.1.0.0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x0409, 1200
+    END
+END
