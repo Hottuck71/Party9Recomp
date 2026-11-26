@@ -39,7 +39,7 @@ static LRESULT CALLBACK window_proc(HWND w, UINT message, WPARAM wp, LPARAM lp) 
     }
     case WM_FAILED:
         SetWindowTextA(button, "Close");
-        SetWindowTextA(w, "Wii Party online: couldn't start");
+        SetWindowTextA(w, "Mario Party 9 online: couldn't start");
         FlashWindow(w, TRUE);
         return 0;
     case WM_CTLCOLORSTATIC:
@@ -62,7 +62,7 @@ static DWORD WINAPI run(LPVOID unused) {
     int width = 560, height = 260;
     int x = (GetSystemMetrics(SM_CXSCREEN) - width) / 2, y = (GetSystemMetrics(SM_CYSCREEN) - height) / 2;
     if (off_screen) x = y = -6000;
-    window = CreateWindowExA(off_screen ? WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW : 0, kind.lpszClassName, "Wii Party online", WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU,
+    window = CreateWindowExA(off_screen ? WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW : 0, kind.lpszClassName, "Mario Party 9 online", WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU,
                              x, y, width, height, NULL, NULL, instance, NULL);
     RECT inside;
     GetClientRect(window, &inside);

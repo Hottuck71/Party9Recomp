@@ -1,15 +1,15 @@
-# Makes a PartyRecomp release from a working toolkit folder: what goes up on GitHub.
+# Makes a Party9Recomp release from a working toolkit folder: what goes up on GitHub.
 #
-#   <toolkit>\work\release\PartyRecomp\                 the release, as a folder
-#   <toolkit>\work\release\PartyRecomp-<v>.zip          the same, zipped
-#   <toolkit>\work\release\PartyRecomp-<v>-Setup.exe    the zip with an installer in front (native/tools/setup.c)
+#   <toolkit>\work\release\Party9Recomp\                 the release, as a folder
+#   <toolkit>\work\release\Party9Recomp-<v>.zip          the same, zipped
+#   <toolkit>\work\release\Party9Recomp-<v>-Setup.exe    the zip with an installer in front (native/tools/setup.c)
 #
 # Only the toolkit's own parts are copied, from a fixed list: the launcher, the translator, the compiler, the runtime
 # source, the relay, the licences, and the help. Nothing from a player's copy of the game (game\, build\, the built
 # game, analysis\), and nothing personal (save\, launcher.ini, logs, work\) can get in, because none of it is on the
 # list. Every file is then searched for this PC's user name and user folders, and the release stops if one turns up.
 #
-#   powershell -ExecutionPolicy Bypass -File scripts\make_release.ps1 -Toolkit "D:\Wii Party PC" [-Version 0.1.0]
+#   powershell -ExecutionPolicy Bypass -File scripts\make_release.ps1 -Toolkit "D:\Mario Party 9 PC" [-Version 0.1.0]
 param(
     [Parameter(Mandatory)] [string]$Toolkit,
     [string]$Version = '',
@@ -18,7 +18,7 @@ param(
 $ErrorActionPreference = 'Stop'
 if (-not $Version) { $Version = (Get-Content (Join-Path $Toolkit 'builder\version.txt') -Raw).Trim() }
 $out = Join-Path $Toolkit 'work\release'
-$stage = Join-Path $out 'PartyRecomp'
+$stage = Join-Path $out 'Party9Recomp'
 $native = Join-Path $PSScriptRoot '..\native' | Resolve-Path
 if (Test-Path $out) { Remove-Item -LiteralPath $out -Recurse -Force }
 New-Item -ItemType Directory -Force $stage | Out-Null
@@ -27,7 +27,7 @@ New-Item -ItemType Directory -Force $stage | Out-Null
 $files = @('Launcher.exe', 'PairRemote.exe', 'README.txt') + (Get-ChildItem $Toolkit -Filter *.dll | ForEach-Object Name)
 foreach ($f in $files) { Copy-Item (Join-Path $Toolkit $f) $stage }
 foreach ($d in 'builder', 'relay', 'licenses', 'nand-template') { Copy-Item (Join-Path $Toolkit $d) $stage -Recurse }
-Set-Content (Join-Path $stage 'release.txt') "PartyRecomp $Version. This file keeps the launcher's save, build, and reports inside this folder. Don't delete it." -Encoding ascii
+Set-Content (Join-Path $stage 'release.txt') "Party9Recomp $Version. This file keeps the launcher's save, build, and reports inside this folder. Don't delete it." -Encoding ascii
 foreach ($stray in 'builder\src\*.bak', 'builder\src\*.orig') { Remove-Item (Join-Path $stage $stray) -ErrorAction SilentlyContinue }
 
 # 2. Nothing personal: this PC's user name as a path part, any user folder, and anything asked for.
@@ -47,8 +47,8 @@ if ($found) { $found | ForEach-Object { Write-Host "personal: $_" }; throw 'Some
 'Checked: nothing personal in ' + (Get-ChildItem $stage -Recurse -File).Count + ' files.'
 
 # 3. The zip, with Windows' own tar (it writes a zip when the name ends in .zip).
-$zip = Join-Path $out "PartyRecomp-$Version.zip"
-& "$env:SystemRoot\System32\tar.exe" -a -c -f $zip -C $out PartyRecomp
+$zip = Join-Path $out "Party9Recomp-$Version.zip"
+& "$env:SystemRoot\System32\tar.exe" -a -c -f $zip -C $out Party9Recomp
 if ($LASTEXITCODE) { throw 'zip' }
 
 # 4. The installer, built with the toolkit's own GCC, with the zip appended and a trailer saying where it starts.
@@ -67,7 +67,7 @@ try {
     & gcc $sysroot "-ffile-prefix-map=$native=." -O2 -Wall -municode -mwindows "-DSETUP_VERSION=L\`"$Version\`"" setup.c $rcobj -o $exe -lole32 -lshell32 -luuid -lcomctl32
     if ($LASTEXITCODE) { throw 'setup.c' }
 } finally { Pop-Location }
-$setup = Join-Path $out "PartyRecomp-$Version-Setup.exe"
+$setup = Join-Path $out "Party9Recomp-$Version-Setup.exe"
 Copy-Item $exe $setup
 $offset = (Get-Item $setup).Length
 $stream = [IO.File]::Open($setup, 'Append')

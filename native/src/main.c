@@ -27,8 +27,8 @@
 #define LOCKED_CACHE_SIZE 0x4000u
 #define MAX_SEEN 4096
 #define RING 64
-#define IDLE_LOOP 0x8013FC20u  /* SelectThread, waiting for a thread to become runnable */
-#define FRAME_MARK 0u /* Resort counted frames at its main loop's wait; Wii Party's isn't mapped yet */
+#define IDLE_LOOP 0x801868A0u  /* SelectThread, waiting for a thread to become runnable */
+#define FRAME_MARK 0u /* Resort counted frames at its main loop's wait; Mario Party 9's isn't mapped yet */
 
 CPUState cpu;
 static u32 spr[1024];
@@ -36,6 +36,12 @@ static u32 locked_cache_transfers, locked_cache_failures;
 static u8 mmio_cc[MMIO_SPAN], mmio_cd[MMIO_SPAN];
 static u8 locked_cache[LOCKED_CACHE_SIZE];
 static u64 total_cycles, dec_fire_tb;
+/* --cpu-speed: the game's processor time per field, in percent of a Wii's. Guest time follows the cycle count,
+   so above 100 each translated cycle counts for less: more of the game's work fits in a field, as with Dolphin's
+   CPU overclock. Frames, timers and sound keep their pace; only work that spans fields (loading) ends sooner.
+   cycle_scale is 65536 * 100 / speed. */
+static u32 cpu_speed = 100, cycle_scale = 65536u, cycle_frac;
+static u64 idle_skipped, busy_mark_cycles, busy_mark_idle; /* the report's processor-use line */
 static int dec_armed;
 FILE* report;
 
@@ -78,9 +84,9 @@ typedef struct {
 } Milestone;
 static Milestone milestones[] = {
     {DOLRECOMP_ENTRY_POINT, "__start", 0},
-    {0x801759B0u, "IPCCltInit", 0},
-    {0x80141490u, "__OSInitSTM", 0},
-    {REL_SPACE_BASE, "first module (boot)", 0},
+    {0x801B8E90u, "IPCCltInit", 0},
+    {0x80188110u, "__OSInitSTM", 0},
+    {REL_SPACE_BASE, "first module (strap)", 0},
 };
 #define MILESTONE_COUNT (sizeof milestones / sizeof *milestones)
 
@@ -150,7 +156,7 @@ void store_be(u8* p, u64 v, u32 size) {
 #define AI_DMA_CONTROL 0x5036u
 #define AI_DMA_RUNNING 0x8000u
 #define AI_FRAME_TICKS (60750000u / 1000u * 3u)
-#define AX_DSP_READY 0x802F6590u
+#define AX_DSP_READY 0x8026EB30u
 #define AX_MAIL_NEW_FRAME 0xBABE0080u
 #define AI_SCNT 0xCD006C08u
 #define AI_TICKS_PER_SAMPLE (60750000u / 48000u)
@@ -324,6 +330,13 @@ static void vi_tick(void) {
     if (cpu.timebase < vi_next_tb) return;
     vi_next_tb = cpu.timebase + VI_FIELD_TICKS;
     vi_fields++;
+    if (vi_fields % 240u == 0) { /* how much of each field the game kept the processor busy, e.g. while loading */
+        u64 all = total_cycles - busy_mark_cycles, idle = idle_skipped - busy_mark_idle;
+        if (all) fprintf(report, "CPU: field %llu, the game busy %u%% of its processor time (speed %u%%)\n",
+                         (unsigned long long)vi_fields, (unsigned)(100u - (u32)(idle * 100u / all)), cpu_speed);
+        busy_mark_cycles = total_cycles;
+        busy_mark_idle = idle_skipped;
+    }
     gx_thread_field(vi_fields); /* keeps the CPU at most about a field ahead of the graphics thread */
     fake_remote_field();
     net_field((u32)vi_fields); /* online: every player's input for this field, before the game reads any */
@@ -603,7 +616,7 @@ static void fallback(CPUState* c, u32 raw, u32 cia) {
     stop_run("unhandled instruction");
 }
 
-/* Does what the game's exception stub at 0x801365F0 does. The OS copies that stub to low
+/* Does what the game's exception stub at 0x8017D280 does. The OS copies that stub to low
    memory at startup, where translated code can't run it. */
 static void enter_os_handler(u32 number) {
     u32 ctx_phys = (u32)load_be(cpu.ram + 0xC0, 4);
@@ -630,7 +643,7 @@ static void enter_os_handler(u32 number) {
     cpu.gpr[3] = number;
     cpu.gpr[4] = (u32)load_be(cpu.ram + 0xD4, 4);
     cpu.gpr[5] = recoverable;
-    cpu.pc = recoverable ? (u32)load_be(cpu.ram + 0x3000u + number * 4u, 4) : 0x80136690u;
+    cpu.pc = recoverable ? (u32)load_be(cpu.ram + 0x3000u + number * 4u, 4) : 0x8017D320u;
     cpu.srr0 = cpu.pc;
 }
 
@@ -756,41 +769,41 @@ static int fps60; /* --fps 60: every scene at 60 frames a second, not only those
 /* Called from the entry label of each function in native/replacements.txt. */
 int native_replaced(CPUState* ctx, u32 pc) {
     switch (pc) {
-    case 0x8013CB10u: /* the SDK's Link(module, bss, fixed): modules go to their translated slots (rel.c) */
+    case 0x80183790u: /* the SDK's Link(module, bss, fixed): modules go to their translated slots (rel.c) */
         rel_link(ctx);
         break;
-    case 0x8013D050u: /* OSUnlink */
+    case 0x80183CD0u: /* OSUnlink */
         rel_unlink(ctx);
         break;
-    case 0x80137680u: /* __OSInitAudioSystem: audio will be native, so no DSP to start */
-    case 0x80137850u: /* __OSStopAudioSystem */
-    case 0x801606D0u: /* __AXOutInitDSP: same reason */
+    case 0x8017E330u: /* __OSInitAudioSystem: audio will be native, so no DSP to start */
+    case 0x8017E500u: /* __OSStopAudioSystem */
+    case 0x801A80C0u: /* __AXOutInitDSP: same reason */
         break;
-    case 0x8018D250u: /* WUDInit: Wii Remotes will come through Windows, so no Bluetooth stack */
+    case 0x801D0CC0u: /* WUDInit: Wii Remotes will come through Windows, so no Bluetooth stack */
         fake_remote_start();
         ctx->gpr[3] = 1;
         break;
-    case 0x801998A0u: /* Bluetooth buffer pool */
+    case 0x801DD410u: /* Bluetooth buffer pool */
         ctx->gpr[3] = fake_remote_buffer();
         break;
-    case 0x801A2058u: /* Bluetooth HID send: the report sits in the buffer in r4 */
+    case 0x801E5BC8u: /* Bluetooth HID send: the report sits in the buffer in r4 */
         fake_remote_send(ctx->gpr[3], ctx->gpr[4]); /* r3: the remote's handle */
         break;
-    case 0x80182DA0u: /* MotionPlus authenticity check: a real remote answers it for itself */
+    case 0x801C6740u: /* MotionPlus authenticity check: a real remote answers it for itself */
         if (fake_remote_is_real()) return 0;
         fake_remote_verify_motion_plus(ctx->gpr[3]);
         break;
-    case 0x801A21FCu: /* Bluetooth stack tick, at the end of WPAD's 1 ms manager */
+    case 0x801E5D6Cu: /* Bluetooth stack tick, at the end of WPAD's 1 ms manager */
         if (fake_remote_tick(ctx)) return 1;
         break;
-    case 0x80137940u: /* DCInvalidateRange: PC memory needs no cache upkeep */
-    case 0x80137970u: /* DCFlushRange */
-    case 0x801379A0u: /* DCStoreRange */
-    case 0x801379D0u: /* DCFlushRangeNoSync */
-    case 0x80137A00u: /* DCStoreRangeNoSync */
-    case 0x80137A90u: /* ICInvalidateRange */
+    case 0x8017E5F0u: /* DCInvalidateRange: PC memory needs no cache upkeep */
+    case 0x8017E620u: /* DCFlushRange */
+    case 0x8017E650u: /* DCStoreRange */
+    case 0x8017E680u: /* DCFlushRangeNoSync */
+    case 0x8017E6B0u: /* DCStoreRangeNoSync */
+    case 0x8017E710u: /* ICInvalidateRange */
         break;
-    case 0x80137A30u: { /* DCZeroRange */
+    case 0x8017E6E0u: { /* DCZeroRange */
         u32 start = ctx->gpr[3] & ~31u, size = ((ctx->gpr[3] & 31u) + ctx->gpr[4] + 31u) & ~31u;
         u8* out = guest_range(start, size);
         if (!out) return 0;
@@ -798,7 +811,7 @@ int native_replaced(CPUState* ctx, u32 pc) {
         break;
     }
     case 0x800043C4u:   /* memcpy */
-    case 0x801CC76Cu: { /* memmove */
+    case 0x80210418u: { /* memmove */
         u8* to = guest_range(ctx->gpr[3], ctx->gpr[5]);
         u8* from = guest_range(ctx->gpr[4], ctx->gpr[5]);
         if (!to || !from || !ctx->gpr[5]) return 0;
@@ -811,38 +824,38 @@ int native_replaced(CPUState* ctx, u32 pc) {
         memset(to, (int)(ctx->gpr[4] & 255u), ctx->gpr[5]);
         break;
     }
-    /* Resort's EGG heap and Yaz0 hooks (a speed-up and a report) and its scene watch don't exist in Wii Party. */
-    case 0x80110F20u: /* NW4R SoundStartable::detail_StartSound(handle, sound ID, start info): only watched */
+    /* Resort's EGG heap and Yaz0 hooks (a speed-up and a report) and its scene watch don't exist in Mario Party 9. */
+    case 0x801563B0u: /* NW4R SoundStartable::detail_StartSound(handle, sound ID, start info): only watched */
         audio_sound_requested(ctx->gpr[5]);
         return 0;
-    case 0x800FC960u: /* BasicSound::StartPrepared: the sound just requested got going */
+    case 0x80141B30u: /* BasicSound::StartPrepared: the sound just requested got going */
         audio_sound_started();
         return 0;
-    case 0x80160590u: /* AI callback: the DSP that AX waits for is always ready here */
+    case 0x801A7F80u: /* AI callback: the DSP that AX waits for is always ready here */
         store_be(plain_memory(AX_DSP_READY & 0x3FFFFFFFu, 4), 1, 4);
         return 0;
-    case 0x8005CE90u: /* the game's own "always 60 fps" switch, built to answer no: --fps 60 turns it on. The frame
-                         rate setter (0x80072020) asks it, and the game then works out its frame rate and time step
-                         from one frame per field, so play runs at its proper speed. */
-        ctx->gpr[3] = fps60 ? 1u : 0u;
+    case 0x80073660u: /* the game's frame rate setter (fields a frame in r3). From it the game works out frames a
+                         second (r13-29776) and the time step animation and timers use (r13-29772), and its frame
+                         pacer (0x8008C698) waits that many fields. --fps 60 asks it for one field a frame, so play
+                         keeps its proper speed at 60 frames a second. The original then runs as usual. */
         {
             static u32 asked;
-            /* The setter holds the fields a frame it was asked for in r31. */
             if (asked++ < 200)
                 fprintf(report, "Frame rate: at field %u the game asked for %u field(s) a frame%s\n", (u32)vi_fields,
-                        ctx->gpr[31], fps60 && ctx->gpr[31] > 1 ? "; running it at 60 fps" : "");
+                        ctx->gpr[3], fps60 && ctx->gpr[3] > 1 ? "; running it at 60 fps" : "");
         }
-        break;
-    case 0x8016A1E0u: /* DSPCheckMailToDSP: mail is taken at once */
+        if (fps60 && ctx->gpr[3] > 1) ctx->gpr[3] = 1;
+        return 0;
+    case 0x801B17B0u: /* DSPCheckMailToDSP: mail is taken at once */
         ctx->gpr[3] = 0;
         break;
-    case 0x8016A220u: /* DSPSendMailToDSP: the word after the new-frame mail is the command list */
+    case 0x801B17F0u: /* DSPSendMailToDSP: the word after the new-frame mail is the command list */
         if (ctx->gpr[3] != AX_MAIL_NEW_FRAME) audio_frame();
         break;
-    case 0x8016A440u: /* OSReport */
+    case 0x801B1A10u: /* OSReport */
         os_report();
         break;
-    case 0x8013AB60u: { /* OSFatal */
+    case 0x801817E0u: { /* OSFatal */
         char message[512];
         read_guest_string(ctx->gpr[5], message, sizeof message);
         fprintf(report, "OSFatal called from %08X: %s\n", ctx->lr, message);
@@ -992,12 +1005,15 @@ static void write_report(void) {
     gx_adapter_write_report();
     fake_remote_write_report();
     net_write_report();
-    { /* the game's frame rate when it stopped: fields a frame (r13-32208) and frames a second (r13-30064) */
-        u8* interval = plain_memory((cpu.gpr[13] - 32208u) & 0x3FFFFFFFu, 4);
-        u8* rate = plain_memory((cpu.gpr[13] - 30064u) & 0x3FFFFFFFu, 4);
-        if (interval && rate)
-            fprintf(report, "frame rate: %u fields a frame, %u frames a second\n", (u32)load_be(interval, 4),
-                    (u32)load_be(rate, 4));
+    { /* the game's frame rate when it stopped: fields a frame (r13-32096) and frames a second (r13-29776, a float) */
+        u8* interval = plain_memory((cpu.gpr[13] - 32096u) & 0x3FFFFFFFu, 4);
+        u8* rate = plain_memory((cpu.gpr[13] - 29776u) & 0x3FFFFFFFu, 4);
+        if (interval && rate) {
+            u32 bits = (u32)load_be(rate, 4);
+            float fps;
+            memcpy(&fps, &bits, 4);
+            fprintf(report, "frame rate: %u fields a frame, %.1f frames a second\n", (u32)load_be(interval, 4), fps);
+        }
     }
     remote_driver_write_report(report);
     gamepad_write_report(report);
@@ -1066,7 +1082,10 @@ static void skip_idle_time(void) {
     u64 next = vi_next_tb;
     if (dec_armed && dec_fire_tb < next) next = dec_fire_tb;
     if (ai_next_tb < next) next = ai_next_tb;
-    if (next * TB_DIVIDER > total_cycles) total_cycles = next * TB_DIVIDER;
+    if (next * TB_DIVIDER > total_cycles) {
+        idle_skipped += next * TB_DIVIDER - total_cycles;
+        total_cycles = next * TB_DIVIDER;
+    }
 }
 
 
@@ -1096,7 +1115,14 @@ static void cpu_loop(void) {
         cpu.pc = pc;
         cpu.downcount = 0;
         fn(&cpu);
-        total_cycles += (u64)(cpu.downcount < 0 ? -cpu.downcount : 1);
+        u64 spent = (u64)(cpu.downcount < 0 ? -cpu.downcount : 1);
+        if (cycle_scale == 65536u) {
+            total_cycles += spent;
+        } else {
+            u64 scaled = spent * cycle_scale + cycle_frac;
+            total_cycles += scaled >> 16;
+            cycle_frac = (u32)(scaled & 0xFFFFu);
+        }
         if (pc == IDLE_LOOP) {
             /* The game may be waiting for the GPU. On the console it answers quickly, so let the graphics
                thread catch up before deciding that nothing can happen until the next interrupt. */
@@ -1173,8 +1199,11 @@ int main(int argc, char** argv) {
         else if (!strcmp(argv[i], "--sim-real-remote")) sim_real_remote = atoi(argv[i + 1]); /* 1, or 2 with a Nunchuk */
         else if (!strcmp(argv[i], "--sim-unplug-after")) sim_unplug_ms = (u32)atoi(argv[i + 1]) * 1000u; /* seconds */
         else if (!strcmp(argv[i], "--test-remote-driver")) return remote_driver_self_test() ? 1 : 0;
+        else if (!strcmp(argv[i], "--test-gamepad")) return gamepad_self_test() ? 1 : 0; /* a virtual pad, no window */
         else if (!strcmp(argv[i], "--nunchuk")) fake_remote_nunchuk(atoi(argv[i + 1]));
         else if (!strcmp(argv[i], "--fps")) fps60 = atoi(argv[i + 1]) >= 60;
+        else if (!strcmp(argv[i], "--cpu-speed")) cpu_speed = (u32)atoi(argv[i + 1]); /* percent of a Wii's */
+        else if (!strcmp(argv[i], "--sideways")) gamepad_set_sideways(atoi(argv[i + 1])); /* gamepads, keyboard */
         else if (!strcmp(argv[i], "--local-devices")) local_devices = atoi(argv[i + 1]); /* tests: 1 real, 2 simulated */
         else if (!strcmp(argv[i], "--nan-trace")) { /* report where float operations first make NaNs */
             extern int fast_nan_trace;
@@ -1256,6 +1285,8 @@ int main(int argc, char** argv) {
         fake_remote_net_mode(net_players(), (u32)player);
         if (fps60) fprintf(report, "Online: 60 fps everywhere is off for online games, so every PC runs the same\n");
         fps60 = 0;
+        if (cpu_speed != 100) fprintf(report, "Online: the processor runs at the Wii's speed, so every PC runs the same\n");
+        cpu_speed = 100;
         for (u32 p = 0; p < net_players(); p++) {
             RemoteCalibration cal;
             net_calibration(p, &cal);
@@ -1280,6 +1311,10 @@ int main(int argc, char** argv) {
 
     run_window = window;
     run_max_cycles = max_cycles;
+    if (cpu_speed < 50) cpu_speed = 50;
+    if (cpu_speed > 400) cpu_speed = 400;
+    cycle_scale = (u32)(6553600u / cpu_speed);
+    if (cpu_speed != 100) fprintf(report, "CPU: %u%% of a Wii's processor time a field\n", cpu_speed);
     run_profile_from = profile_from;
     run_profile_until = profile_until;
     /* The graphics stream gets its own thread when there's a window, unless --gx-thread 0. The fifo log

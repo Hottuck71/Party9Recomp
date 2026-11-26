@@ -246,24 +246,25 @@ static int decode_extension(Driver* d, const u8* e, RemoteSample* s) {
 }
 
 /* Where the game should see the sensor bar: the remote's own dots if it sees a bar, else (first remote only) the
-   mouse while it moves, else the MotionPlus pointer; and pressing A with nothing on the screen centres that
-   pointer, so "point at the screen and press A" always works. */
+   mouse from when it moves until the remote's own pointer moves, else the MotionPlus or tilt pointer; and pressing
+   A with nothing on the screen centres that pointer, so "point at the screen and press A" always works. */
 static void choose_dots(Driver* d, const u8* r, double when, RemoteSample* s) {
     float x, y;
     int a_pressed = (r[2] & 0x08) && !d->a_held;
     d->a_held = (r[2] & 0x08) != 0;
     if (d->motion_plus) motion_pointer_feed_at(d->slot, r, when);
     if (s->dots[0][0] != NO_DOT) return;
-    if (d->slot == 0 && fake_remote_mouse_pointer(&x, &y)) {
-        motion_pointer_place_at(d->slot, x, y);
+    float ox = 0, oy = 0; /* the remote's own pointer: MotionPlus, or tilt with no gyro */
+    int own = d->motion_plus ? motion_pointer_get_at(d->slot, &ox, &oy)
+                             : motion_pointer_tilt_at(d->slot, s->accel, d->cal.accel, &ox, &oy);
+    if (d->slot == 0 && fake_remote_mouse_aims(own, ox, oy) && fake_remote_mouse_pointer(&x, &y)) {
+        if (d->motion_plus && fake_remote_mouse_moving()) motion_pointer_place_at(d->slot, x, y);
         fake_remote_dots_for(x, y, s->dots);
-    } else if (d->motion_plus && motion_pointer_get_at(d->slot, &x, &y)) {
-        fake_remote_dots_for(x, y, s->dots);
+    } else if (own) {
+        fake_remote_dots_for(ox, oy, s->dots);
     } else if (d->motion_plus && a_pressed) {
         motion_pointer_calibrate_at(d->slot);
         fake_remote_dots_for(0, 0, s->dots);
-    } else if (!d->motion_plus && motion_pointer_tilt_at(d->slot, s->accel, d->cal.accel, &x, &y)) {
-        fake_remote_dots_for(x, y, s->dots); /* no gyro: the pointer follows tilt */
     }
 }
 

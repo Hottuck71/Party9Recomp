@@ -1,12 +1,12 @@
-# How PartyRecomp works
+# How Party9Recomp works
 
-This is ResortRecomp's design, which PartyRecomp shares; what Wii Party adds (REL modules, the controllers, the
-frame rate) is in [WII-PARTY.md](WII-PARTY.md).
+This is ResortRecomp's design, which Party9Recomp shares; what Mario Party 9 adds (REL modules, the controllers, the
+frame rate) is in [MARIO-PARTY-9.md](MARIO-PARTY-9.md).
 
 ## From a disc to a PC program, on the player's PC
 
 1. **Extract.** Dolphin's `DolphinTool` unpacks the player's disc image. The launcher checks `sys/main.dol`'s
-   SHA-256 against the one release this project supports (Wii Party USA, SUPE01).
+   SHA-256 against the one release this project supports (Mario Party 9 USA, SSQE01).
 2. **Translate.** [DolRecomp](https://github.com/ExpansionPak/DolRecomp) turns the PowerPC machine code in
    `main.dol` into C: about 400 files of straight-line C, one per 16 KB of code, with every instruction spelled out
    on an emulated register file. It runs in seconds.

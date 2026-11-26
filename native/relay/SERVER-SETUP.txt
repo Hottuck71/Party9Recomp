@@ -1,14 +1,15 @@
 RUNNING YOUR OWN ONLINE SERVER (RELAY)
-For PartyRecomp (Wii Party) and ResortRecomp (Wii Sports Resort),
+For Party9Recomp (Mario Party 9), PartyRecomp (Wii Party) and
+ResortRecomp (Wii Sports Resort),
 by Lane Carle (crazyman12)
 =====================================================================
 
-ALREADY RUNNING ONE FOR WII SPORTS RESORT?
-------------------------------------------
-Then you're done: Wii Party uses the very same relay. Put the same
-address in Wii Party's launcher (Online tab, "Relay server"). One relay
-serves both games at once; each room is one game, and a player with the
-other game is turned away with a message saying so.
+ALREADY RUNNING ONE FOR WII PARTY OR WII SPORTS RESORT?
+-------------------------------------------------------
+Then you're done: Mario Party 9 uses the very same relay. Put the same
+address in Mario Party 9's launcher (Online tab, "Relay server"). One
+relay serves all three games at once; each room is one game, and a
+player with a different game is turned away with a message saying so.
 
 WHAT THIS IS
 ------------
@@ -111,7 +112,7 @@ B. WINDOWS 10 OR 11 PC
    "Allow access".
    If it didn't ask, or friends can't connect: open PowerShell as
    administrator (right-click Start, "Terminal (Admin)") and run:
-     New-NetFirewallRule -DisplayName "Wii Party relay" -Direction Inbound -Protocol TCP -LocalPort 51020 -Action Allow
+     New-NetFirewallRule -DisplayName "Party9Recomp relay" -Direction Inbound -Protocol TCP -LocalPort 51020 -Action Allow
 
 3. Find this PC's address on your home network
    Press Win+R, type cmd, press Enter, then type:

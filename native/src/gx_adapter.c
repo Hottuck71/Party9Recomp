@@ -11,7 +11,10 @@
 #include "gx_thread.h"
 
 #define EFB_WIDTH 640u
-#define EFB_HEIGHT 528u
+/* The frame buffer the picture is shown from. The hardware's holds 528 lines, but Mario Party 9 (USA) draws and
+   shows 480, so a 528-line buffer left a black band under the picture. 480 lines with the glue's width ratio is
+   exactly 16:9. */
+#define EFB_HEIGHT 480u
 #define ARRAYS 16u
 #define MAPS 8u
 #define TLUT_SLOTS 20u
@@ -49,6 +52,33 @@ static int active;
 static u32 array_base[ARRAYS], array_size[ARRAYS], array_declared[ARRAYS];
 static u32 texture_dirty;
 static struct { u32 source, entries; } tlut_loads[0x400];
+
+/* Aurora keeps one palette per TLUT slot and draws a frame's work later, so two palettes loaded into one slot in a
+   frame both come out as the last. Games do that: Mario Party 9's character cards load each card's back and front
+   palettes (different formats) into the same TMEM spot, one draw after the other, and every card layer then took
+   whichever was loaded last, which hid the portraits. So each palette (its memory, format and size) gets an aurora
+   slot of its own, the least recently used one, instead of the slot the game named. */
+static struct { u32 source, format, entries, used; } aurora_tluts[TLUT_SLOTS];
+static u32 tlut_clock, tlut_reassigned;
+
+static u32 aurora_tlut_slot(u32 source, u32 format, u32 entries) {
+    u32 oldest = 0;
+    tlut_clock++;
+    for (u32 i = 0; i < TLUT_SLOTS; i++) {
+        if (aurora_tluts[i].used && aurora_tluts[i].source == source && aurora_tluts[i].format == format &&
+            aurora_tluts[i].entries == entries) {
+            aurora_tluts[i].used = tlut_clock;
+            return i;
+        }
+        if (aurora_tluts[i].used < aurora_tluts[oldest].used) oldest = i;
+    }
+    if (aurora_tluts[oldest].used) tlut_reassigned++;
+    aurora_tluts[oldest].source = source;
+    aurora_tluts[oldest].format = format;
+    aurora_tluts[oldest].entries = entries;
+    aurora_tluts[oldest].used = tlut_clock;
+    return oldest;
+}
 static u8 packet[5 + 4 * 0x10000];
 static u32 unknown_copy_formats, unknown_logic_ops;
 static const char* capture_prefix;
@@ -432,14 +462,18 @@ static void bind_textures(const GxState* s) {
                         t.width, t.height, t.format, copied);
             if (copied) copies[at].bound = 1;
         }
-        u32 slot = t.tlut_offset >> 9;
-            if (t.format == GX_TF_C4 || t.format == GX_TF_C8 || t.format == GX_TF_C14X2) {
-            const void* palette = plain_memory(tlut_loads[slot & 0x3FFu].source, 32);
-            if (palette) glue_load_tlut(slot % TLUT_SLOTS, palette, t.tlut_format, tlut_loads[slot & 0x3FFu].entries);
+        u32 slot = t.tlut_offset >> 9, aurora_slot = slot % TLUT_SLOTS;
+        if (t.format == GX_TF_C4 || t.format == GX_TF_C8 || t.format == GX_TF_C14X2) {
+            u32 source = tlut_loads[slot & 0x3FFu].source, entries = tlut_loads[slot & 0x3FFu].entries;
+            const void* palette = plain_memory(source, 32);
+            if (palette) {
+                aurora_slot = aurora_tlut_slot(source, t.tlut_format, entries);
+                glue_load_tlut(aurora_slot, palette, t.tlut_format, entries);
+            }
         }
         u32 mode1 = s->bp[(map < 4 ? 0x84u : 0xA4u) + (map & 3u)];
         /* The frame number makes aurora look at the data again, in case it changed in place. */
-        glue_load_texture(map, host, t.width, t.height, t.format, slot % TLUT_SLOTS, ((mode1 >> 8) & 0xFFu) != 0, frames);
+        glue_load_texture(map, host, t.width, t.height, t.format, aurora_slot, ((mode1 >> 8) & 0xFFu) != 0, frames);
     }
 }
 
@@ -491,6 +525,52 @@ static void log_draw(const GxState* s, const GxDraw* d) {
             s->bp[BP_Z_MODE], s->bp[BP_BLEND], s->bp[0xF3], s->bp[BP_GEN_MODE], cull_mode(s->bp[BP_GEN_MODE]),
             s->xf[0x100C], s->xf[0x100D], s->xf[0x100A], s->xf[0x100E], s->xf[0x1010],
             ((s->bp[BP_GEN_MODE] >> 10) & 15u) + 1u, s->bp[0xE0] & 0xFFFFFFu, s->bp[0xE1] & 0xFFFFFFu);
+    /* The TEV in full, for draws whose colours come out wrong: order, combiners, constants, swaps, and map 1. */
+    GxTexture t1 = {0};
+    int textured1 = gx_texture_info(s, 1, &t1);
+    fprintf(report, "  tev order %06X %06X c0 %06X a0 %06X c1 %06X a1 %06X c2 %06X a2 %06X ksel %06X %06X %06X %06X "
+            "reg %06X %06X %06X %06X %06X %06X t1 %08X %ux%u f%u\n",
+            s->bp[0x28] & 0xFFFFFFu, s->bp[0x29] & 0xFFFFFFu, s->bp[0xC0] & 0xFFFFFFu, s->bp[0xC1] & 0xFFFFFFu,
+            s->bp[0xC2] & 0xFFFFFFu, s->bp[0xC3] & 0xFFFFFFu, s->bp[0xC4] & 0xFFFFFFu, s->bp[0xC5] & 0xFFFFFFu,
+            s->bp[0xF6] & 0xFFFFFFu, s->bp[0xF7] & 0xFFFFFFu, s->bp[0xF8] & 0xFFFFFFu, s->bp[0xF9] & 0xFFFFFFu,
+            s->bp[0xE2] & 0xFFFFFFu, s->bp[0xE3] & 0xFFFFFFu, s->bp[0xE4] & 0xFFFFFFu, s->bp[0xE5] & 0xFFFFFFu,
+            s->bp[0xE6] & 0xFFFFFFu, s->bp[0xE7] & 0xFFFFFFu,
+            textured1 ? t1.address : 0u, t1.width, t1.height, t1.format);
+    if (textured) { /* what map 0's memory holds now: its first bytes and a hash of all of it */
+        u32 bytes = t.width * t.height * 2u;
+        const u8* m = plain_memory(t.address, bytes);
+        if (m) {
+            u32 h = 2166136261u;
+            for (u32 i = 0; i < bytes; i++) h = (h ^ m[i]) * 16777619u;
+            fprintf(report, "  t0 data %02X%02X%02X%02X %02X%02X%02X%02X hash %08X\n", m[0], m[1], m[2], m[3], m[4],
+                    m[5], m[6], m[7], h);
+            fprintf(report, "  texgen %08X %08X dual %08X %08X dualon %08X mtxidx %08X %08X xfidx %08X %08X\n",
+                    s->xf[0x1040], s->xf[0x1041], s->xf[0x1050], s->xf[0x1051], s->xf[0x1012], s->cp[0x30], s->cp[0x40],
+                    s->xf[0x1018], s->xf[0x1019]);
+            if (t.format == GX_TF_C4 || t.format == GX_TF_C8 || t.format == GX_TF_C14X2) {
+                u32 slot = t.tlut_offset >> 9, source = tlut_loads[slot & 0x3FFu].source;
+                const u8* pal = plain_memory(source, 512);
+                fprintf(report, "  tlut offset %05X slot %u (aurora %u) format %u source %08X entries %u e96 %04X e0 %04X\n",
+                        t.tlut_offset, slot, slot % TLUT_SLOTS, t.tlut_format, source, tlut_loads[slot & 0x3FFu].entries,
+                        pal ? (u32)load_be(pal + 192, 2) : 0u, pal ? (u32)load_be(pal, 2) : 0u);
+            }
+            for (u32 k = 0; k < 2; k++) { /* the texture matrices texgens 0 and 1 use */
+                u32 idx = k == 0 ? (s->cp[0x30] >> 6) & 63u : (s->cp[0x30] >> 12) & 63u;
+                fprintf(report, "  texmtx%u (%u):", k, idx);
+                for (u32 e = 0; e < 8; e++) fprintf(report, " %.4f", xf_value(s, idx * 4u + e));
+                fprintf(report, "\n");
+            }
+            if (textured1) {
+                u32 b1 = t1.width * t1.height / 2u, h1 = 2166136261u, nonzero = 0;
+                const u8* m1 = plain_memory(t1.address, b1);
+                for (u32 i = 0; m1 && i < b1; i++) {
+                    h1 = (h1 ^ m1[i]) * 16777619u;
+                    nonzero += m1[i] != 0;
+                }
+                fprintf(report, "  t1 hash %08X nonzero bytes %u of %u\n", h1, nonzero, b1);
+            }
+        }
+    }
 }
 
 void gx_adapter_draw(const GxState* s, const GxDraw* d, const u8* p, u32 size) {
@@ -531,6 +611,7 @@ void gx_adapter_write_report(void) {
     fprintf(report, "copies evicted %llu unknown formats %u unknown logic ops %u shots %llu\n",
             (unsigned long long)copies_evicted, unknown_copy_formats, unknown_logic_ops,
             (unsigned long long)shots_saved);
+    fprintf(report, "palettes: %u loads moved an older palette out of its slot\n", tlut_reassigned);
 }
 
 /* Called after a display copy. Returns 0 if the window has been closed. */

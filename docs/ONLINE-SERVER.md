@@ -1,6 +1,6 @@
 # Make your own online server
 
-PartyRecomp (like ResortRecomp, and through the same relay: one relay serves both games) plays online through a tiny **relay server** (`wsr_relay`). Every player's game connects *out* to the
+Party9Recomp (like Party9Recomp and ResortRecomp, and through the same relay: one relay serves all three games) plays online through a tiny **relay server** (`wsr_relay`). Every player's game connects *out* to the
 relay, and the relay passes the players' input between them. Only the relay's computer ever needs a port opened;
 nobody else touches their router.
 
@@ -21,7 +21,7 @@ It uses **one TCP port, 51020** by default. Never UDP.
 | Friends in other houses, from a Linux box | [Home server on Ubuntu](#3-home-server-on-ubuntu-or-raspberry-pi) + [router](#4-forward-the-port-on-your-router) | Yes, one port |
 | Friends, but your internet provider blocks port forwarding | [Ubuntu steps](#3-home-server-on-ubuntu-or-raspberry-pi) on a rented VPS | No (the VPS has its own address) |
 
-Everyone who plays needs the **same PartyRecomp version** and their own copy of the game, set up with the
+Everyone who plays needs the **same Party9Recomp version** and their own copy of the game, set up with the
 launcher.
 
 ---
@@ -30,7 +30,7 @@ launcher.
 
 For playing with people on the same network, in the same house or at a LAN party. No router settings.
 
-1. On any PC on the network (the host's PC is fine), open the PartyRecomp folder, then the `relay` folder, and
+1. On any PC on the network (the host's PC is fine), open the Party9Recomp folder, then the `relay` folder, and
    double-click **`Start relay.bat`** (or `wsr_relay.exe`). A black window says:
    ```
    wsr_relay listening on TCP port 51020 at 0.0.0.0
@@ -60,7 +60,7 @@ A Windows PC at your home runs the relay, and friends anywhere connect to it ove
 2. If friends can't connect later, or Windows never asked about the firewall, open PowerShell **as
    administrator** (right-click Start, **Terminal (Admin)**) and run:
    ```powershell
-   New-NetFirewallRule -DisplayName "PartyRecomp relay" -Direction Inbound -Protocol TCP -LocalPort 51020 -Action Allow
+   New-NetFirewallRule -DisplayName "Party9Recomp relay" -Direction Inbound -Protocol TCP -LocalPort 51020 -Action Allow
    ```
 3. Give the PC a fixed address on your network, so the port forward keeps pointing at it. In your router this is
    usually called **DHCP reservation**, **static lease** or **address reservation**.
@@ -74,11 +74,11 @@ A Windows PC at your home runs the relay, and friends anywhere connect to it ove
 - **When the PC starts, even before anyone signs in, with no window:** in PowerShell as administrator, changing
   the path to where your `relay` folder is:
   ```powershell
-  $relay = "C:\Games\PartyRecomp\relay\wsr_relay.exe"
-  Register-ScheduledTask -TaskName "PartyRecomp relay" -User SYSTEM -RunLevel Highest -Trigger (New-ScheduledTaskTrigger -AtStartup) -Action (New-ScheduledTaskAction -Execute $relay -Argument 51020) -Settings (New-ScheduledTaskSettingsSet -ExecutionTimeLimit 0)
-  Start-ScheduledTask -TaskName "PartyRecomp relay"
+  $relay = "C:\Games\Party9Recomp\relay\wsr_relay.exe"
+  Register-ScheduledTask -TaskName "Party9Recomp relay" -User SYSTEM -RunLevel Highest -Trigger (New-ScheduledTaskTrigger -AtStartup) -Action (New-ScheduledTaskAction -Execute $relay -Argument 51020) -Settings (New-ScheduledTaskSettingsSet -ExecutionTimeLimit 0)
+  Start-ScheduledTask -TaskName "Party9Recomp relay"
   ```
-  To remove it later: `Unregister-ScheduledTask -TaskName "PartyRecomp relay"`.
+  To remove it later: `Unregister-ScheduledTask -TaskName "Party9Recomp relay"`.
 
 ---
 
@@ -95,8 +95,8 @@ at its keyboard.
 2. **Download the relay's two files** straight from this repository:
    ```bash
    mkdir -p ~/wsr-relay && cd ~/wsr-relay
-   curl -LO https://raw.githubusercontent.com/Hottuck71/PartyRecomp/main/native/relay/wsr_relay.c
-   curl -LO https://raw.githubusercontent.com/Hottuck71/PartyRecomp/main/native/relay/wsr-relay.service
+   curl -LO https://raw.githubusercontent.com/Hottuck71/Party9Recomp/main/native/relay/wsr_relay.c
+   curl -LO https://raw.githubusercontent.com/Hottuck71/Party9Recomp/main/native/relay/wsr-relay.service
    ```
    (Or copy them from the `relay` folder of the download, using `scp`, a USB stick, or anything else.)
 3. **Build it.** No output means it worked:
@@ -230,7 +230,7 @@ The game opens a small window that says what went wrong:
 |---|---|
 | **Couldn't reach the relay server** | Is the relay running (its window open, or `systemctl status wsr-relay`)? Is the port forwarded and allowed through the firewall? Inside your home, use the relay's **home** address, not the public one. Run the `Test-NetConnection` check above. See the carrier-grade NAT note under [router](#4-forward-the-port-on-your-router). |
 | **There's no room with that code** | A typo, or the host closed their waiting window. The host's code changes when they press **New code**. |
-| **The host has a different build** | Everyone needs the same PartyRecomp version. Download the same release and set it up again. |
+| **The host has a different build** | Everyone needs the same Party9Recomp version. Download the same release and set it up again. |
 | Lag or stutter | Online play is lockstep: the slowest PC sets the pace. On a slower PC, use **Play > Speed > Start measuring** and the **Graphics** tab's **Low** preset. Where the relay runs matters less, but a relay close to the players helps. |
 
 The relay itself never needs updating unless a release says so.

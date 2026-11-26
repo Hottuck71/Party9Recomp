@@ -58,7 +58,7 @@ void ios_init(const char* root) {
     make_parents(probe);
     /* The game's own data folder, which a console makes when the game is installed. The game writes its save
        there but never makes the folder: without it, it shows "Could not access Wii system memory". */
-    snprintf(probe, sizeof probe, "%s/title/00010000/53555045/data/", nand_root);
+    snprintf(probe, sizeof probe, "%s/title/00010000/53535145/data/", nand_root);
     make_parents(probe);
 }
 

@@ -1,12 +1,12 @@
-/* PartyRecomp-<version>-Setup.exe: the release zip with a small installer in front of it.
+/* Party9Recomp-<version>-Setup.exe: the release zip with a small installer in front of it.
 
    The zip is appended to this program, followed by a 16-byte trailer: "PRSETUP1" and the zip's offset as a
    little-endian 64-bit number (scripts/make_release.ps1 does the appending). The installer asks for a folder,
    unpacks the zip there with Windows' own tar.exe (built into Windows 10 and 11), offers a desktop shortcut, and
    offers to open the launcher. It installs nothing else, writes no registry keys, and needs no administrator
-   rights: PartyRecomp lives entirely in its folder, and removing it is deleting that folder.
+   rights: Party9Recomp lives entirely in its folder, and removing it is deleting that folder.
 
-   Setup.exe /S <folder> unpacks into <folder> (making <folder>\PartyRecomp) without asking anything, for scripts
+   Setup.exe /S <folder> unpacks into <folder> (making <folder>\Party9Recomp) without asking anything, for scripts
    and tests; its exit code is 0 when it worked.
 
    Build: gcc -O2 -municode -mwindows setup.c setup_rc.o -o setup.exe -lole32 -lshell32 -luuid -lcomctl32 */
@@ -25,7 +25,7 @@
 #ifndef SETUP_VERSION
 #define SETUP_VERSION L"0.1.0"
 #endif
-#define TITLE L"PartyRecomp " SETUP_VERSION L" Setup"
+#define TITLE L"Party9Recomp " SETUP_VERSION L" Setup"
 #define MAGIC "PRSETUP1"
 
 static void say(const wchar_t* text, UINT flags) { MessageBoxW(NULL, text, TITLE, flags); }
@@ -80,7 +80,7 @@ static int pick_folder(wchar_t* out, size_t size) {
     DWORD options = 0;
     IFileOpenDialog_GetOptions(dialog, &options);
     IFileOpenDialog_SetOptions(dialog, options | FOS_PICKFOLDERS | FOS_FORCEFILESYSTEM | FOS_PATHMUSTEXIST);
-    IFileOpenDialog_SetTitle(dialog, L"Choose where to put PartyRecomp (a PartyRecomp folder is made inside it)");
+    IFileOpenDialog_SetTitle(dialog, L"Choose where to put Party9Recomp (a Party9Recomp folder is made inside it)");
     IShellItem* start = NULL;
     wchar_t* profile = NULL;
     if (SUCCEEDED(SHGetKnownFolderPath(&FOLDERID_Profile, 0, NULL, &profile)) &&
@@ -113,7 +113,7 @@ static HWND progress_window(void) {
     HWND window = CreateWindowExW(WS_EX_TOPMOST, L"STATIC", TITLE, WS_POPUP | WS_CAPTION | WS_VISIBLE,
                                   (GetSystemMetrics(SM_CXSCREEN) - w) / 2, (GetSystemMetrics(SM_CYSCREEN) - h) / 2, w, h,
                                   NULL, NULL, NULL, NULL);
-    CreateWindowExW(0, L"STATIC", L"Unpacking PartyRecomp... (about a minute)", WS_CHILD | WS_VISIBLE, 20, 14, 400, 20,
+    CreateWindowExW(0, L"STATIC", L"Unpacking Party9Recomp... (about a minute)", WS_CHILD | WS_VISIBLE, 20, 14, 400, 20,
                     window, NULL, NULL, NULL);
     HWND bar = CreateWindowExW(0, PROGRESS_CLASSW, NULL, WS_CHILD | WS_VISIBLE | PBS_MARQUEE, 20, 42, 390, 20, window,
                                NULL, NULL, NULL);
@@ -154,14 +154,14 @@ static void desktop_shortcut(const wchar_t* folder) {
     wchar_t target[MAX_PATH], link[MAX_PATH];
     if (FAILED(SHGetKnownFolderPath(&FOLDERID_Desktop, 0, NULL, &desktop))) return;
     swprintf(target, MAX_PATH, L"%ls\\Launcher.exe", folder);
-    swprintf(link, MAX_PATH, L"%ls\\PartyRecomp.lnk", desktop);
+    swprintf(link, MAX_PATH, L"%ls\\Party9Recomp.lnk", desktop);
     CoTaskMemFree(desktop);
     IShellLinkW* shell_link = NULL;
     if (FAILED(CoCreateInstance(&CLSID_ShellLink, NULL, CLSCTX_INPROC_SERVER, &IID_IShellLinkW, (void**)&shell_link)))
         return;
     IShellLinkW_SetPath(shell_link, target);
     IShellLinkW_SetWorkingDirectory(shell_link, folder);
-    IShellLinkW_SetDescription(shell_link, L"PartyRecomp: Wii Party on your PC, from your own disc");
+    IShellLinkW_SetDescription(shell_link, L"Party9Recomp: Mario Party 9 on your PC, from your own disc");
     IPersistFile* file = NULL;
     if (SUCCEEDED(IShellLinkW_QueryInterface(shell_link, &IID_IPersistFile, (void**)&file))) {
         IPersistFile_Save(file, link, TRUE);
@@ -178,17 +178,17 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE previous, PWSTR args, int show
     if (argv && count == 3 && !_wcsicmp(argv[1], L"/S")) { /* unattended: Setup.exe /S <folder>, no questions */
         wchar_t zip[MAX_PATH];
         GetTempPathW(MAX_PATH, zip);
-        wcscat(zip, L"PartyRecomp-setup.zip");
+        wcscat(zip, L"Party9Recomp-setup.zip");
         CreateDirectoryW(argv[2], NULL);
         DWORD code = write_payload(zip) ? unpack(zip, argv[2]) : 2;
         DeleteFileW(zip);
         return (int)code;
     }
     if (MessageBoxW(NULL,
-                    L"This puts PartyRecomp " SETUP_VERSION L" in a folder you choose.\n\n"
-                    L"PartyRecomp contains no part of Wii Party. You need your own Wii Party disc (USA, SUPE01) as a "
+                    L"This puts Party9Recomp " SETUP_VERSION L" in a folder you choose.\n\n"
+                    L"Party9Recomp contains no part of Mario Party 9. You need your own Mario Party 9 disc (USA, SSQE01) as a "
                     L"disc image, and Dolphin's DolphinTool.exe; the launcher then builds the game on this PC.\n\n"
-                    L"Pick a place with about 15 GB free, not inside Program Files. A folder named PartyRecomp is made "
+                    L"Pick a place with about 20 GB free, not inside Program Files. A folder named Party9Recomp is made "
                     L"inside the one you pick. Continue?",
                     TITLE, MB_OKCANCEL | MB_ICONINFORMATION) != IDOK)
         return 0;
@@ -205,14 +205,14 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE previous, PWSTR args, int show
         }
         break;
     }
-    swprintf(folder, MAX_PATH, L"%ls\\PartyRecomp", base);
+    swprintf(folder, MAX_PATH, L"%ls\\Party9Recomp", base);
     if (GetFileAttributesW(folder) != INVALID_FILE_ATTRIBUTES &&
-        MessageBoxW(NULL, L"There's already a PartyRecomp folder there. Update it? Your save, your built game, and "
-                          L"your settings in it are kept; only PartyRecomp's own files are replaced.",
+        MessageBoxW(NULL, L"There's already a Party9Recomp folder there. Update it? Your save, your built game, and "
+                          L"your settings in it are kept; only Party9Recomp's own files are replaced.",
                     TITLE, MB_YESNO | MB_ICONQUESTION) != IDYES)
         return 0;
     GetTempPathW(MAX_PATH, zip);
-    wcscat(zip, L"PartyRecomp-setup.zip");
+    wcscat(zip, L"Party9Recomp-setup.zip");
     if (!write_payload(zip)) {
         say(L"This setup file seems to be damaged or incomplete. Please download it again.", MB_ICONERROR);
         return 1;
@@ -228,11 +228,11 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE previous, PWSTR args, int show
         say(text, MB_ICONERROR);
         return 1;
     }
-    if (MessageBoxW(NULL, L"PartyRecomp is in place. Put a shortcut to it on the desktop?", TITLE,
+    if (MessageBoxW(NULL, L"Party9Recomp is in place. Put a shortcut to it on the desktop?", TITLE,
                     MB_YESNO | MB_ICONQUESTION) == IDYES)
         desktop_shortcut(folder);
     if (MessageBoxW(NULL, L"Done. Open the launcher now? On its Play tab, pick your disc image and DolphinTool.exe, "
-                          L"then press \"Set up the game\".\n\nTo remove PartyRecomp later, delete its folder.",
+                          L"then press \"Set up the game\".\n\nTo remove Party9Recomp later, delete its folder.",
                     TITLE, MB_YESNO | MB_ICONINFORMATION) == IDYES)
         ShellExecuteW(NULL, L"open", launcher, NULL, folder, SW_SHOWNORMAL);
     CoUninitialize();

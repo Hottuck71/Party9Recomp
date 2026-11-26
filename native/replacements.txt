@@ -1,30 +1,31 @@
-# Game functions replaced by host code in native/src/main.c, for Wii Party (USA, SUPE01). One "address name" per line.
-# Found from ResortRecomp's list by matching function bodies (scripts/port_addresses.py).
-8013CB10 Link
-8013D050 OSUnlink
-80137680 __OSInitAudioSystem
-80137850 __OSStopAudioSystem
-8016A440 OSReport
-8013AB60 OSFatal
-8018D250 WUDInit
-801606D0 __AXOutInitDSP
-801998A0 GKI_getbuf
-801A2058 BTA_HhSendData
-801A21FC BluetoothTick
-80182DA0 MotionPlusCheck
-80160590 AICallbackWatch
-80110F20 SoundStartWatch
-800FC960 SoundStartedWatch
-8016A1E0 DSPCheckMailToDSP
-8016A220 DSPSendMailToDSP
-80137940 DCInvalidateRange
-80137970 DCFlushRange
-801379A0 DCStoreRange
-801379D0 DCFlushRangeNoSync
-80137A00 DCStoreRangeNoSync
-80137A30 DCZeroRange
-80137A90 ICInvalidateRange
+# Game functions replaced by host code in native/src/main.c, for Mario Party 9 (USA, SSQE01). One "address name" per line.
+# Found from PartyRecomp's list by matching function bodies (scripts/port_addresses.py), and by hand where the
+# game's own code differs (the frame rate setter).
+80183790 Link
+80183CD0 OSUnlink
+8017E330 __OSInitAudioSystem
+8017E500 __OSStopAudioSystem
+801B1A10 OSReport
+801817E0 OSFatal
+801D0CC0 WUDInit
+801A80C0 __AXOutInitDSP
+801DD410 GKI_getbuf
+801E5BC8 BTA_HhSendData
+801E5D6C BluetoothTick
+801C6740 MotionPlusCheck
+801A7F80 AICallbackWatch
+801563B0 SoundStartWatch
+80141B30 SoundStartedWatch
+801B17B0 DSPCheckMailToDSP
+801B17F0 DSPSendMailToDSP
+8017E5F0 DCInvalidateRange
+8017E620 DCFlushRange
+8017E650 DCStoreRange
+8017E680 DCFlushRangeNoSync
+8017E6B0 DCStoreRangeNoSync
+8017E6E0 DCZeroRange
+8017E710 ICInvalidateRange
 800043C4 memcpy
-801CC76C memmove
+80210418 memmove
 80004714 memset
-8005CE90 Force60Check
+80073660 SetFieldsPerFrame

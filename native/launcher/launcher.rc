@@ -15,12 +15,12 @@ BEGIN
         BLOCK "040904B0"
         BEGIN
             VALUE "CompanyName", "Lane Carle (crazyman12)"
-            VALUE "FileDescription", "Wii Party Launcher"
+            VALUE "FileDescription", "Mario Party 9 Launcher"
             VALUE "FileVersion", "1.0.0.0"
             VALUE "InternalName", "Launcher"
-            VALUE "LegalCopyright", "Launcher (c) 2026 Lane Carle (crazyman12). Wii Party is Nintendo's. Mii art: My Avatar Editor (c) 2009 Trevor McCauley, MIT licence."
+            VALUE "LegalCopyright", "Launcher (c) 2026 Lane Carle (crazyman12). Mario Party 9 is Nintendo's. Mii art: My Avatar Editor (c) 2009 Trevor McCauley, MIT licence."
             VALUE "OriginalFilename", "Launcher.exe"
-            VALUE "ProductName", "Wii Party Launcher"
+            VALUE "ProductName", "Mario Party 9 Launcher"
             VALUE "ProductVersion", "1.0.0.0"
             VALUE "Comments", "By Lane Carle, aka crazyman12."
         END

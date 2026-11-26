@@ -1,6 +1,6 @@
 # Builds Launcher.exe and PairRemote.exe with the toolkit's own GCC, then copies the launcher's parts into the toolkit
 # (builder/src, builder/game.mk). Dear ImGui and SDL3's headers come from a local aurora/ImGui checkout.
-#   scripts/build_launcher.ps1 -Toolkit "D:\Wii Party PC" -ImGui <imgui folder> -Sdl <SDL folder with include\SDL3>
+#   scripts/build_launcher.ps1 -Toolkit "D:\Mario Party 9 PC" -ImGui <imgui folder> -Sdl <SDL folder with include\SDL3>
 param(
     [Parameter(Mandatory)] [string]$Toolkit,
     [Parameter(Mandatory)] [string]$ImGui,

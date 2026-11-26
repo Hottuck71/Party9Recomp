@@ -1,4 +1,4 @@
-/* REL modules: Wii Party keeps nearly all of its game code in modules it loads while it runs (one per minigame,
+/* REL modules: Mario Party 9 (like Wii Party) keeps nearly all of its game code in modules it loads while it runs (one per minigame,
    board, menu...). Each was translated ahead of time for one fixed address, its slot (scripts/rel_build.py);
    rel.c stands in for the SDK's linker so every module the game loads lands in its slot. */
 #ifndef REL_H

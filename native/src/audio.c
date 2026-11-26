@@ -23,10 +23,10 @@
 #include "audio.h"
 #include "host.h"
 
-#define AX_PB_BASE 0x802F65F0u  /* word: the voice block array */
-#define AX_PB_COUNT 0x802F65FCu /* word: how many voices */
-#define AX_CYCLES_USED 0x802F6604u  /* word: __AXSyncPBs' estimate of this frame's DSP cycles */
-#define AX_CYCLES_LIMIT 0x802F6608u /* word: past this, __AXSyncPBs drops the remaining voices */
+#define AX_PB_BASE 0x8026EB90u  /* word: the voice block array */
+#define AX_PB_COUNT 0x8026EB9Cu /* word: how many voices */
+#define AX_CYCLES_USED 0x8026EBA4u  /* word: __AXSyncPBs' estimate of this frame's DSP cycles */
+#define AX_CYCLES_LIMIT 0x8026EBA8u /* word: past this, __AXSyncPBs drops the remaining voices */
 #define PB_SIZE 0x140u
 #define FRAME_SAMPLES 96u /* 3 ms at 32 kHz */
 #define OUTPUT_RATE 32000u

@@ -1,6 +1,6 @@
 // The launcher: set up the game from your own disc image, make Miis, and start a game alone or online.
 //
-// Play:      pick your Wii Party disc image (or an extracted folder). It is extracted with DolphinTool
+// Play:      pick your Mario Party 9 disc image (or an extracted folder). It is extracted with DolphinTool
 //            from your own Dolphin, and its main.dol must match the one this build was translated from.
 // Mii Maker: edits the Mii database in the game's save folder, which the game shows as its Miis.
 // Wii Remote: pairs a Wii Remote with Windows through PairRemote.exe, and checks one is connected.
@@ -45,8 +45,8 @@ namespace fs = std::filesystem;
 
 namespace {
 
-// The main.dol this build was translated from: Wii Party, USA (SUPE01).
-constexpr const char* kMainDolSha256 = "f8f46694f942ded88fa6952ca5f93701100d304d63407978d4c700c1bdceab6c";
+// The main.dol this build was translated from: Mario Party 9, USA (SSQE01).
+constexpr const char* kMainDolSha256 = "1f2d4e9792ca8b57cd2eb42464d66151ddbfbb4bf5ea37010349cce6e50282e1";
 constexpr int kDefaultPort = 51010;
 
 fs::path g_dir;  // where the launcher is
@@ -116,7 +116,7 @@ std::string check_game(const fs::path& folder) {
     if (folder.empty()) return "no extracted game found there";
     std::string hash = sha256_file(folder / "sys" / "main.dol");
     if (hash != kMainDolSha256)
-        return "this isn't the version this build was made from: it needs Wii Party for the USA (SUPE01)";
+        return "this isn't the version this build was made from: it needs Mario Party 9 for the USA (SSQE01)";
     return "";
 }
 
@@ -184,7 +184,7 @@ fs::path nand_folder() {
     // What a console has before any game runs: the game's data folder (made when it's installed) and the Wii
     // Menu's Mii database, empty, as the game's own format routine writes it. Without them the game stops at
     // "Could not access Wii system memory" (a new save folder, as a release copy starts with).
-    fs::create_directories(nand / "title" / "00010000" / "53555045" / "data", ec);
+    fs::create_directories(nand / "title" / "00010000" / "53535145" / "data", ec);
     fs::path db = nand / "shared2" / "menu" / "FaceLib" / "RFL_DB.dat";
     if (!fs::exists(db)) {
         fs::create_directories(db.parent_path(), ec);
@@ -235,6 +235,7 @@ int gfx_backend() { return gfx("gfx_backend", 0, 0, 3); }
 int gfx_gpu() { return gfx("gfx_gpu", 0, 0, 1); }
 int gfx_fps() { return gfx("gfx_fps", 30, 30, 60) >= 60 ? 60 : 30; }
 int rumble() { return gfx("rumble", 1, 0, 1); }
+int sideways() { return gfx("sideways", 1, 0, 1); } // gamepads and keyboard as a sideways Wii Remote
 void set_gfx(const char* key, int value) {
     g_settings[key] = std::to_string(value);
     save_settings();
@@ -245,18 +246,18 @@ std::wstring graphics_args() {
            std::to_wstring(gfx_aniso()) + L" --vsync " + std::to_wstring(gfx_vsync()) + L" --fullscreen " +
            std::to_wstring(gfx_fullscreen()) + L" --window-size " + wide(kWindowSizes[gfx_window()]) + L" --backend " +
            wide(kBackends[gfx_backend()]) + L" --gpu " + wide(kGpus[gfx_gpu()]) + L" --rumble " + std::to_wstring(rumble()) +
-           L" --fps " + std::to_wstring(gfx_fps());
+           L" --fps " + std::to_wstring(gfx_fps()) + L" --sideways " + std::to_wstring(sideways());
 }
 
 fs::path game_exe() {
-    return builder::available(g_dir) ? builder::game_exe(g_dir) : g_dir / "PartyRecomp-Game.exe";
+    return builder::available(g_dir) ? builder::game_exe(g_dir) : g_dir / "Party9Recomp-Game.exe";
 }
 
 // The graphics library keeps its shader cache in a folder named after the app. The toolkit's prebuilt graphics glue
-// still carries Resort's name, so without this Wii Party would share (and could damage) Resort's cache.
+// still carries Resort's name, so without this Mario Party 9 would share (and could damage) Resort's cache.
 fs::path cache_folder() {
     const char* appdata = std::getenv("APPDATA");
-    fs::path folder = appdata ? fs::u8path(appdata) / "Wii Party" : g_dir / "cache";
+    fs::path folder = appdata ? fs::u8path(appdata) / "Mario Party 9" : g_dir / "cache";
     std::error_code ec;
     fs::create_directories(folder, ec);
     return folder;
@@ -378,7 +379,7 @@ std::string game_problem() {
 
 // ---- Save data: Miis and the game's records, to and from a zip ----
 
-const char* const kSaveParts[] = {"shared2/menu/FaceLib/RFL_DB.dat", "title/00010000/53555045/data"};
+const char* const kSaveParts[] = {"shared2/menu/FaceLib/RFL_DB.dat", "title/00010000/53535145/data"};
 std::mutex g_save_lock;
 std::string g_save_export_to, g_save_import_from, g_save_message;
 
@@ -429,7 +430,7 @@ std::string import_save(const fs::path& zip) {
             if (e.is_regular_file()) files.push_back(std::string(kSaveParts[1]) + "/" + e.path().filename().u8string());
     if (files.empty()) {
         fs::remove_all(unpack, ec);
-        return "That zip has no Wii Party save in it (it needs " + std::string(kSaveParts[0]) + " or " +
+        return "That zip has no Mario Party 9 save in it (it needs " + std::string(kSaveParts[0]) + " or " +
                kSaveParts[1] + ").";
     }
     // The save being replaced is kept, in save-backups beside the launcher.
@@ -509,7 +510,7 @@ void save_data_section(SDL_Window* window) {
     if (!ImGui::TreeNode("Save data")) return;
     ImGui::TextWrapped("Your Miis and the game's records, as one zip: to keep a copy, move to another PC, or share.");
     static const SDL_DialogFileFilter zip_filter[] = {{"Zip files", "zip"}};
-    if (ImGui::Button("Export save...")) SDL_ShowSaveFileDialog(on_save_export, nullptr, window, zip_filter, 1, "WiiParty-save.zip");
+    if (ImGui::Button("Export save...")) SDL_ShowSaveFileDialog(on_save_export, nullptr, window, zip_filter, 1, "MarioParty9-save.zip");
     ImGui::SameLine();
     if (ImGui::Button("Import save...")) SDL_ShowOpenFileDialog(on_save_import, nullptr, window, zip_filter, 1, nullptr, false);
     ImGui::TextDisabled("Importing replaces your Miis and records; the old ones are kept in save-backups first.");
@@ -536,7 +537,7 @@ void play_tab(SDL_Window* window) {
     fs::path game = game_folder_in(resolve(setting("game")));
     std::string state = game_problem();
     bool ready = state.empty();
-    ImGui::TextWrapped("This plays your own copy of Wii Party. Pick its disc image once; the launcher extracts "
+    ImGui::TextWrapped("This plays your own copy of Mario Party 9. Pick its disc image once; the launcher extracts "
                        "it with DolphinTool from your Dolphin and checks it is the USA release this build was made from.");
     ImGui::Spacing();
     ImGui::InputText("Disc image", g_image, sizeof g_image);
@@ -575,6 +576,12 @@ void play_tab(SDL_Window* window) {
     ImGui::EndDisabled();
     bool shake = rumble() != 0;
     if (ImGui::Checkbox("Wii Remote rumble", &shake)) set_gfx("rumble", shake);
+    bool turned = sideways() != 0;
+    if (ImGui::Checkbox("Sideways controls", &turned)) set_gfx("sideways", turned);
+    ImGui::SameLine();
+    hint("gamepads and the keyboard act as a Wii Remote held sideways, as Mario Party 9 is mostly played: the d-pad "
+         "matches the screen, A (bottom button) or Z is 2, B (right button) or X is 1. F8 or pressing a gamepad's left "
+         "stick switches in the game. Real Wii Remotes aren't changed.");
     builder::Mode mode;
     if (builder::available(g_dir) && ready && builder::built(g_dir, kMainDolSha256, &mode) && ImGui::TreeNode("Speed (for slower PCs)")) {
         ImGui::BeginDisabled(g_setup.busy);
@@ -672,9 +679,9 @@ void graphics_tab() {
     bool fps60 = gfx_fps() == 60;
     if (ImGui::Checkbox("60 fps everywhere", &fps60)) set_gfx("gfx_fps", fps60 ? 60 : 30);
     ImGui::SameLine();
-    hint("off by default: menus and many minigames run at 30 fps, as on the Wii. On, they run at 60 at their normal "
-         "speed, using the game's own frame rate setting; it needs about twice the processor and graphics card time. "
-         "Online games always use 30.");
+    hint("off by default: scenes that run at 30 fps on the Wii run at 60 at their normal speed, using the game's own "
+         "frame rate setting; it needs about twice the processor and graphics card time. Online games always use the "
+         "Wii's rates.");
     bool fullscreen = gfx_fullscreen() != 0;
     if (ImGui::Checkbox("Start in full screen", &fullscreen)) set_gfx("gfx_fullscreen", fullscreen);
 
@@ -690,8 +697,9 @@ void graphics_tab() {
 
     static const int backends[] = {0, 1, 2, 3};
     choose("Graphics API", "gfx_backend", gfx_backend(), backends, kBackendNames, 4);
-    hint("Automatic picks Direct3D 12. If the game won't start or draws wrongly, try another; "
-                        "Direct3D 11 suits older graphics cards.");
+    hint("Automatic picks Direct3D 12. Vulkan prepares a new scene's shaders faster, so the stutter the first time "
+         "you see a board or minigame is shorter. If the game won't start or draws wrongly, try another; Direct3D 11 "
+         "suits older graphics cards.");
     ImGui::Separator();
     if (ImGui::Button("Back to the defaults")) {
         for (const char* key : {"gfx_scale", "gfx_aniso", "gfx_vsync", "gfx_fullscreen", "gfx_window", "gfx_backend", "gfx_gpu", "gfx_fps"})
@@ -730,15 +738,15 @@ void apply_theme(SDL_Window* window) {
 
 void about_tab(SDL_Window* window) {
     std::string v = builder::available(g_dir) ? builder::version(g_dir) : kVersion;
-    ImGui::Text("PartyRecomp %s", v.c_str());
+    ImGui::Text("Party9Recomp %s", v.c_str());
     ImGui::Text("Launcher and toolkit by %s", kAuthor);
     ImGui::Spacing();
     static const int themes[] = {0, 1, 2};
     static const char* const theme_names[] = {"As Windows is set", "Light", "Dark"};
     if (choose("Look", "theme", theme_setting(), themes, theme_names, 3)) apply_theme(window);
     ImGui::Separator();
-    hint("PartyRecomp plays your own copy of Wii Party (USA, SUPE01) on a PC. It contains no part of the game: "
-         "your own disc is translated and built on this PC. Wii Party is Nintendo's; this project isn't made or "
+    hint("Party9Recomp plays your own copy of Mario Party 9 (USA, SSQE01) on a PC. It contains no part of the game: "
+         "your own disc is translated and built on this PC. Mario Party 9 is Nintendo's; this project isn't made or "
          "endorsed by Nintendo.");
     hint("Game code translated with DolRecomp (GPL-3.0). This project is GPL-3.0; see licenses/ for every part's licence.");
     hint("Mii pictures and icons: My Avatar Editor, (c) 2009 Trevor McCauley, MIT licence (licenses/MyAvatarEditor.txt).");
@@ -917,7 +925,7 @@ int main(int argc, char** argv) {
     // so the look can be checked without capturing the screen.
     const bool shot = argc > 3 && std::string(argv[1]) == "--shot";
     if (!SDL_Init(SDL_INIT_VIDEO)) return 1;
-    SDL_Window* window = SDL_CreateWindow("PartyRecomp", 1100, 720,
+    SDL_Window* window = SDL_CreateWindow("Party9Recomp", 1100, 720,
                                           shot ? SDL_WINDOW_HIDDEN : (SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY));
     SDL_Renderer* renderer = SDL_CreateRenderer(window, nullptr);
     SDL_SetRenderVSync(renderer, 1);

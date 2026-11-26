@@ -1,4 +1,4 @@
-// Resources for PartyRecomp-<version>-Setup.exe: its manifest (no administrator rights, modern controls) and version
+// Resources for Party9Recomp-<version>-Setup.exe: its manifest (no administrator rights, modern controls) and version
 // details. See setup.c.
 #include <winver.h>
 
@@ -18,12 +18,12 @@ BEGIN
         BLOCK "040904B0"
         BEGIN
             VALUE "CompanyName", "Lane Carle (crazyman12)"
-            VALUE "FileDescription", "PartyRecomp Setup"
+            VALUE "FileDescription", "Party9Recomp Setup"
             VALUE "FileVersion", "0.1.0.0"
-            VALUE "InternalName", "PartyRecomp-Setup"
-            VALUE "LegalCopyright", "PartyRecomp is free software (GPL-3.0). Wii Party is Nintendo's; no part of it is included."
-            VALUE "OriginalFilename", "PartyRecomp-Setup.exe"
-            VALUE "ProductName", "PartyRecomp"
+            VALUE "InternalName", "Party9Recomp-Setup"
+            VALUE "LegalCopyright", "Party9Recomp is free software (GPL-3.0). Mario Party 9 is Nintendo's; no part of it is included."
+            VALUE "OriginalFilename", "Party9Recomp-Setup.exe"
+            VALUE "ProductName", "Party9Recomp"
             VALUE "ProductVersion", "0.1.0.0"
         END
     END

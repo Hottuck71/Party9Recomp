@@ -80,7 +80,7 @@ int glue_init(int argc, char** argv, uint32_t width, uint32_t height, int quiet)
     config.windowPosX = -1;
     config.windowPosY = -1;
   }
-  config.appName = "Wii Party";
+  config.appName = "Mario Party 9";
   config.logCallback = &log_line;
   config.logLevel = LOG_WARNING;
   config.windowWidth = 1280;

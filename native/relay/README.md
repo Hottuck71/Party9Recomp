@@ -1,7 +1,7 @@
 # wsr_relay: an online room server for Ubuntu or Windows
 
-One relay serves both PartyRecomp (Wii Party) and ResortRecomp (Wii Sports Resort): if you already run it for
-Resort, Wii Party needs nothing new. On Windows, double-click `Start relay.bat`. Step by step for both systems:
+One relay serves Party9Recomp (Mario Party 9), PartyRecomp (Wii Party) and ResortRecomp (Wii Sports Resort): if
+you already run it for one of them, Mario Party 9 needs nothing new. On Windows, double-click `Start relay.bat`. Step by step for both systems:
 `SERVER-SETUP.txt`.
 
 Online play normally needs the host's router to forward a port to the host's PC. With this relay running on a
@@ -22,7 +22,7 @@ It's one C file, `wsr_relay.c`, with no game code in it.
 From this PC (PowerShell), replacing `you@server` with your SSH login:
 
 ```
-scp "D:\Wii Party PC\relay\wsr_relay.c" "D:\Wii Party PC\relay\wsr-relay.service" you@server:~
+scp "D:\Mario Party 9 PC\relay\wsr_relay.c" "D:\Mario Party 9 PC\relay\wsr-relay.service" you@server:~
 ```
 
 Or copy the two files over any way you like.

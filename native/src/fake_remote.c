@@ -20,10 +20,10 @@
 #include "real_remote.h"
 #include "remote_driver.h"
 
-#define WUD_STATE 0x802BA9E8u    /* byte: 2 ready for callbacks, 3 running */
-#define WUD_RECV_CB 0x802BA9CCu
-#define WUD_CONN_CB 0x802BA9D0u
-#define WPAD_CHANNELS 0x802B62D0u
+#define WUD_STATE 0x802F9968u    /* byte: 2 ready for callbacks, 3 running */
+#define WUD_RECV_CB 0x802F994Cu
+#define WUD_CONN_CB 0x802F9950u
+#define WPAD_CHANNELS 0x802F5250u
 #define WUD_READY 2u
 #define WUD_RUNNING 3u
 #define SCRATCH_SEND 0x80002000u /* free low memory: the send buffer, report, and device info */
@@ -145,9 +145,15 @@ static Remote remotes[MAX_REMOTES];
 static Remote* R = remotes;
 static u32 remote_count = 1;
 static u32 ticks, log_count;
-/* With a real remote, the mouse only stands in for the pointer for a moment after it moves. */
-#define MOUSE_POINTER_MS 1500u
+/* The mouse takes player 1's pointer when it moves and keeps it, held still or not, until the other pointer (a
+   gamepad's, or a real remote's MotionPlus or tilt) moves MOUSE_HANDOVER (window units, -1 to 1) from where it
+   was when the mouse stopped. A remote resting on the table or a pad's idle stick then never takes it back. */
+#define MOUSE_STILL_MS 150u
+#define MOUSE_HANDOVER 0.2f
 static u32 mouse_moved_at, ir_from_remote, ir_from_mouse, ir_none;
+static volatile int mouse_has_pointer;
+static float handover_x, handover_y;
+static int handover_set;
 static float mouse_last_x, mouse_last_y, mouse_window_x, mouse_window_y;
 static u32 ir_from_motion, calibrations;
 static int enabled;
@@ -554,11 +560,12 @@ void fake_remote_live(u32 buttons, float x, float y, int pointer, float pitch, f
     if (pressed & 0x10000u) motion_pointer_recentre();
     if (pressed & 0x20000u) motion_pointer_flip_x();
     if (pressed & 0x40000u) motion_pointer_flip_y();
-    buttons &= 0xFFFFu;
+    buttons = gamepad_turn_keyboard(buttons & 0xFFFFu); /* sideways controls: the keys turn with the gamepads */
     if (pointer && (x != mouse_last_x || y != mouse_last_y)) {
         mouse_window_x = x;
         mouse_window_y = y;
         mouse_moved_at = ticks ? ticks : 1u;
+        mouse_has_pointer = 1;
         mouse_last_x = x;
         mouse_last_y = y;
     }
@@ -847,11 +854,31 @@ void fake_remote_dots_for(float x, float y, u16 dots[2][2]) {
     }
 }
 
+int fake_remote_mouse_aims(int other_on, float other_x, float other_y) {
+    if (!mouse_moved_at || !mouse_has_pointer) return 0;
+    if (!other_on) {
+        handover_set = 0;
+        return 1;
+    }
+    if (!handover_set || ticks - mouse_moved_at < MOUSE_STILL_MS) { /* where the other pointer is as the mouse stops */
+        handover_x = other_x;
+        handover_y = other_y;
+        handover_set = 1;
+        return 1;
+    }
+    if (fabsf(other_x - handover_x) > MOUSE_HANDOVER || fabsf(other_y - handover_y) > MOUSE_HANDOVER) {
+        mouse_has_pointer = 0; /* the remote or pad is pointing somewhere now: it has the pointer back */
+        return 0;
+    }
+    return 1;
+}
+
+int fake_remote_mouse_moving(void) { return mouse_moved_at && ticks - mouse_moved_at < MOUSE_STILL_MS; }
+
 int fake_remote_mouse_pointer(float* x, float* y) {
-    if (!mouse_moved_at || ticks - mouse_moved_at >= MOUSE_POINTER_MS) return 0;
     *x = mouse_window_x;
     *y = mouse_window_y;
-    return 1;
+    return mouse_moved_at != 0;
 }
 
 static void send_data(void) {
@@ -918,8 +945,8 @@ static void dress_seat(u32 player) {
     R = was;
 }
 
-/* The keyboard and mouse, and a gamepad if there is one, as one player's live input. The mouse aims while it
-   has moved in the last moment; otherwise the gamepad does. */
+/* The keyboard and mouse, and a gamepad if there is one, as one player's live input. The mouse aims from when it
+   moves until the gamepad's pointer moves (fake_remote_mouse_aims). */
 static void take_live(Remote* remote, const LiveInput* kb, const PadInput* pad) {
     LiveInput* live = &remote->live;
     float swing = remote->current.swing;
@@ -935,7 +962,7 @@ static void take_live(Remote* remote, const LiveInput* kb, const PadInput* pad) 
     live->nswing = kb ? kb->nswing : 0;
     live->accel_on = pad && pad->motion && !(kb && (kb->pitch || kb->roll || kb->swing > 0));
     if (live->accel_on) memcpy(live->accel, pad->accel, sizeof live->accel);
-    int mouse_aims = kb && kb->pointer && (!pad || (mouse_moved_at && ticks - mouse_moved_at < MOUSE_POINTER_MS));
+    int mouse_aims = kb && kb->pointer && (!pad || fake_remote_mouse_aims(pad->pointer, pad->x, pad->y));
     if (mouse_aims) {
         live->pointer = 1;
         live->x = kb->x;
@@ -1089,8 +1116,8 @@ void fake_remote_local_input(RemoteInput* out) {
     PadInput pad; /* this PC's first gamepad plays too */
     if (gamepad_get(0, &pad)) {
         out->buttons |= pad.buttons;
-        int mouse_recent = mouse_moved_at && ticks - mouse_moved_at < MOUSE_POINTER_MS;
-        if (!mouse_recent && !local_step.pointer) {
+        int mouse_aims = local_live.pointer && fake_remote_mouse_aims(pad.pointer, pad.x, pad.y);
+        if (!mouse_aims && !local_step.pointer) {
             out->pointer = pad.pointer;
             out->x = pad.x * POINTER_X_SCALE;
             out->y = POINTER_Y_CENTER + pad.y * POINTER_Y_SCALE;
@@ -1220,11 +1247,13 @@ static void add_mouse_pointer_real(u8* r, double when) {
     static int a_held;
     int a_pressed = (r[2] & 0x08) && !a_held;
     a_held = (r[2] & 0x08) != 0;
-    if (mouse_moved_at && ticks - mouse_moved_at < MOUSE_POINTER_MS) {
+    int motion_on = motion_pointer_get(&x, &y);
+    if (fake_remote_mouse_aims(R->ir_on && motion_on, x, y)) {
         ir_from_mouse++;
         add_mouse_pointer(r);
-        motion_pointer_place(mouse_window_x, mouse_window_y); /* the MotionPlus pointer carries on from here */
-    } else if (R->ir_on && motion_pointer_get(&x, &y)) {
+        if (fake_remote_mouse_moving())
+            motion_pointer_place(mouse_window_x, mouse_window_y); /* the MotionPlus pointer carries on from here */
+    } else if (R->ir_on && motion_on) {
         ir_from_motion++;
         put_ir_at(r, x, y);
     } else if (R->ir_on && a_pressed) {

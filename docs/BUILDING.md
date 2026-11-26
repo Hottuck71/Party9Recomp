@@ -1,8 +1,8 @@
 # Building the toolkit
 
-> PartyRecomp's toolkit is ResortRecomp's, with this repository's runtime and launcher. Build the base toolkit as
+> Party9Recomp's toolkit is ResortRecomp's, with this repository's runtime and launcher. Build the base toolkit as
 > below (the scripts still call it ResortRecomp), then with it in a folder, `scripts\build_launcher.ps1 -Toolkit
-> <folder> -ImGui <imgui> -Sdl <SDL>` builds PartyRecomp's `Launcher.exe` and `PairRemote.exe` and copies the
+> <folder> -ImGui <imgui> -Sdl <SDL>` builds Party9Recomp's `Launcher.exe` and `PairRemote.exe` and copies the
 > runtime (`native\src`, `native\replacements.txt`, `native\builder\game.mk`, `native\include`) into it, and
 > `scripts\make_release.ps1 -Toolkit <folder>` makes the release zip and the Setup exe from it, checking that
 > nothing personal or from the game is inside. The scripts for building by hand from a disc image: `unlz11.py`,

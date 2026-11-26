@@ -77,10 +77,13 @@ void fake_remote_net_mode(u32 players, u32 me);          /* before fake_remote_s
 void fake_remote_local_input(RemoteInput* out);           /* this PC's input, now */
 void fake_remote_apply_input(u32 player, const RemoteInput* in); /* one player's input for this field */
 void fake_remote_set_calibration(u32 player, const RemoteCalibration* cal); /* before fake_remote_setup */
-/* For remote_driver.c: sensor bar dots for a pointer at window position (x, y), -1 to 1, and the mouse's
-   position if it moved in the last moment. */
+/* For remote_driver.c: sensor bar dots for a pointer at window position (x, y), -1 to 1; the mouse's position
+   (0 until it has moved); whether the mouse has player 1's pointer, given the other pointer (on, and where), which
+   takes it back by moving; and whether the mouse is moving right now. */
 void fake_remote_dots_for(float x, float y, u16 dots[2][2]);
 int fake_remote_mouse_pointer(float* x, float* y);
+int fake_remote_mouse_aims(int other_on, float other_x, float other_y);
+int fake_remote_mouse_moving(void);
 
 u32 host_field(void); /* main.c: video fields so far */
 

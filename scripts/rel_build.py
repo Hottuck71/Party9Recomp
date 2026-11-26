@@ -1,4 +1,4 @@
-"""Translate Wii Party's REL modules, one at a time, each at its own fixed slot address.
+"""Translate Mario Party 9's REL modules, one at a time, each at its own fixed slot address.
 
 On the console the game loads a module into a heap buffer wherever there is room and the SDK's Link() relocates
 it there. Translated code can't move, so every module is translated for one address (its slot) and the runtime
@@ -27,24 +27,35 @@ from concurrent.futures import ThreadPoolExecutor
 
 SLOT_TOP = 0x82000000
 
-# (kind, base). A module's kind is its name without the trailing number, or the whole name for one-offs.
+# (kinds, base). A module's kind is its name without the trailing number (bd03 is a "bd"); kinds sharing a slot
+# never run together. The boards, menu, results and party modes each carry the whole board engine (1.2 to 1.7 MB).
+# Keep in step with kSlots in native/launcher/builder.cpp.
 SLOTS = [
-    ("boot", 0x81800000),
-    ("loading", 0x81801000),
-    ("inst", 0x81810000),
-    ("menu", 0x818C0000),
-    ("openmess", 0x81990000),
-    ("ranking", 0x81A10000),
-    ("ms", 0x81A90000),
-    ("mr", 0x81B70000),
-    ("mg", 0x81CB0000),
+    ("strap", 0x81800000),
+    ("Introduction", 0x81801000),
+    ("inst", 0x81802000),
+    ("menu_title", 0x81814000),
+    ("advpoint", 0x8182C000),
+    ("constellation", 0x81848000),
+    ("extra", 0x8186D000),
+    ("gift", 0x818A1000),
+    ("sme_op", 0x818EC000),
+    ("sme_ed", 0x81925000),
+    ("sme_stage", 0x8195B000),
+    ("mg", 0x81989000),
+    ("menu staff", 0x81A19000),
+    ("bd bdtutorial", 0x81B89000),
+    ("mgresult bdresults", 0x81D2A000),
+    ("mgm", 0x81E65000),
 ]
 
 
 def kind_of(name):
-    for kind, _ in SLOTS:
-        if name == kind or (len(kind) == 2 and name.startswith(kind) and name[2:].isdigit()):
-            return kind
+    """The SLOTS entry (its kinds string) a module belongs to."""
+    kind = name.rstrip("0123456789")
+    for kinds, _ in SLOTS:
+        if kind in kinds.split():
+            return kinds
     raise SystemExit(f"no slot for module {name}")
 
 
@@ -70,7 +81,7 @@ def translate(dolrecomp, rel_path, base, work):
     if os.path.exists(stamp) and open(stamp).read() == want:
         return
     os.makedirs(work, exist_ok=True)
-    r = subprocess.run([dolrecomp, "--cpu", "broadway", "--rel-base", f"0x{base:08X}", rel_path, "SUPE01", work],
+    r = subprocess.run([dolrecomp, "--cpu", "broadway", "--rel-base", f"0x{base:08X}", rel_path, "SSQE01", work],
                        capture_output=True, text=True)
     if r.returncode:
         raise SystemExit(f"dolrecomp failed on {rel_path}:\n{r.stdout}\n{r.stderr}")
@@ -156,7 +167,7 @@ def main():
     print(f"{len(ordered)} modules translated; {len(keep)} chunks in {out_chunks}")
     for kind, base in SLOTS:
         ms = [m for m in ordered if kind_of(m["name"]) == kind]
-        print(f"  slot {kind:9} {base:08X}: {len(ms):3} modules, largest ends {max(m['end'] for m in ms):08X}")
+        print(f"  slot {kind:18} {base:08X}: {len(ms):3} modules, largest ends {max(m['end'] for m in ms):08X}")
 
 
 if __name__ == "__main__":

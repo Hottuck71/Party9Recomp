@@ -6,7 +6,7 @@
 #include <string.h>
 #include "host.h"
 
-#define MAX_PIECES 16384 /* Wii Party has about 6,100 files; Resort had 444 */
+#define MAX_PIECES 16384 /* Wii Party has about 6,100 files, Mario Party 9 a similar count; Resort had 444 */
 #define MAX_READ_LOG 400
 
 typedef struct {

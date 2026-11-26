@@ -7,7 +7,7 @@
 //   builder/lib/               the graphics library (aurora and what it uses), prebuilt, and link.rsp
 //   builder/toolchain/         GCC and binutils (MSYS2's MinGW-w64 UCRT64 packages), and mingw32-make
 //   builder/game.mk            the build
-// Work goes to build/ beside the launcher, the game to PartyRecomp-Game.exe, a note of what was built to
+// Work goes to build/ beside the launcher, the game to Party9Recomp-Game.exe, a note of what was built to
 // game-build.txt, and the compiler's output to build-log.txt.
 #include "builder.h"
 
@@ -152,28 +152,35 @@ std::string add_hooks(const fs::path& dir) {
     return "";
 }
 
-// ---- Wii Party's REL modules (what scripts/rel_build.py does for this project's own build) ----
-// Nearly all of the game's code is in modules under files/rel, loaded while it runs. Each is translated for its own
-// fixed address, its slot; the runtime's linker (src/rel.c) puts every module the game loads in its slot. Modules
-// of one kind never run together, so they share a slot. Slots sit above the game's 24 MB, below 0x82000000 so
-// main.dol stays in reach of the modules' branches. Keep in step with scripts/rel_build.py.
+// ---- Mario Party 9's REL modules (what scripts/rel_build.py does for this project's own build) ----
+// Nearly all of the game's code is in modules under files/modules, loaded while it runs. Each is translated for its
+// own fixed address, its slot; the runtime's linker (src/rel.c) puts every module the game loads in its slot. A
+// module's kind is its name without the trailing number (bd03 is a "bd"); modules of the kinds in one slot never
+// run together, so they share it, and the runtime stops with a report if two ever overlap. The boards, menu,
+// results and party modes each carry the whole board engine (1.2 to 1.7 MB), so they get four slots of their own.
+// Slots sit above the game's 24 MB, below 0x82000000 so main.dol stays in reach of the modules' branches. Keep in
+// step with scripts/rel_build.py.
 struct Slot {
-    const char* kind;
+    const char* kinds; // space-separated
     uint32_t base;
 };
-const Slot kSlots[] = {{"boot", 0x81800000u},    {"loading", 0x81801000u},  {"inst", 0x81810000u},
-                       {"menu", 0x818C0000u},    {"openmess", 0x81990000u}, {"ranking", 0x81A10000u},
-                       {"ms", 0x81A90000u},      {"mr", 0x81B70000u},       {"mg", 0x81CB0000u}};
+const Slot kSlots[] = {{"strap", 0x81800000u},          {"Introduction", 0x81801000u}, {"inst", 0x81802000u},
+                       {"menu_title", 0x81814000u},     {"advpoint", 0x8182C000u},     {"constellation", 0x81848000u},
+                       {"extra", 0x8186D000u},          {"gift", 0x818A1000u},         {"sme_op", 0x818EC000u},
+                       {"sme_ed", 0x81925000u},         {"sme_stage", 0x8195B000u},    {"mg", 0x81989000u},
+                       {"menu staff", 0x81A19000u},     {"bd bdtutorial", 0x81B89000u},
+                       {"mgresult bdresults", 0x81D2A000u}, {"mgm", 0x81E65000u}};
 constexpr uint32_t kSlotTop = 0x82000000u;
 constexpr int kSlotCount = int(sizeof kSlots / sizeof *kSlots);
 
 int slot_of(const std::string& name) {
+    std::string kind = name;
+    while (!kind.empty() && kind.back() >= '0' && kind.back() <= '9') kind.pop_back();
     for (int i = 0; i < kSlotCount; i++) {
-        std::string kind = kSlots[i].kind;
-        if (name == kind) return i;
-        if (kind.size() == 2 && name.size() > 2 && name.compare(0, 2, kind) == 0 &&
-            std::all_of(name.begin() + 2, name.end(), [](char c) { return c >= '0' && c <= '9'; }))
-            return i;
+        std::istringstream kinds(kSlots[i].kinds);
+        std::string k;
+        while (kinds >> k)
+            if (k == kind) return i;
     }
     return -1;
 }
@@ -281,7 +288,7 @@ std::string build_modules(const fs::path& dir, const fs::path& game, unsigned jo
     fs::create_directories(out, ec);
     say("Unpacking the game's modules...");
     std::map<uint32_t, Module> by_id;
-    for (auto& e : fs::directory_iterator(game / "files" / "rel", ec)) {
+    for (auto& e : fs::directory_iterator(game / "files" / "modules", ec)) {
         std::string file = e.path().filename().string();
         if (file.size() < 8 || file.compare(file.size() - 7, 7, ".rel.lz") != 0) continue;
         std::string data;
@@ -309,7 +316,7 @@ std::string build_modules(const fs::path& dir, const fs::path& game, unsigned jo
         if (!f) return "Couldn't write " + (rels / (m.name + ".rel")).u8string() + ".";
         by_id[m.id] = m;
     }
-    if (by_id.empty()) return "The game has no modules in files/rel. Is this Wii Party?";
+    if (by_id.empty()) return "The game has no modules in files/modules. Is this Mario Party 9?";
     std::vector<Module> modules;
     for (int s = 0; s < kSlotCount; s++)
         for (auto& [id, m] : by_id)
@@ -330,7 +337,7 @@ std::string build_modules(const fs::path& dir, const fs::path& game, unsigned jo
                 std::snprintf(base, sizeof base, "0x%08X", m.base);
                 int code = run(dir, to, quote(dir / "builder" / "dolrecomp.exe") + L" --cpu broadway --rel-base " +
                                             std::wstring(base, base + std::strlen(base)) + L" " + quote(rels / (m.name + ".rel")) +
-                                            L" SUPE01 " + quote(to), nullptr);
+                                            L" SSQE01 " + quote(to), nullptr);
                 if (code != 0) failed_code = code;
                 finished++;
             }
@@ -404,7 +411,7 @@ bool available(const fs::path& dir) { return fs::exists(dir / "builder" / "game.
 
 std::string version(const fs::path& dir) { return trim(read_text(dir / "builder" / "version.txt")); }
 
-fs::path game_exe(const fs::path& dir) { return dir / "PartyRecomp-Game.exe"; }
+fs::path game_exe(const fs::path& dir) { return dir / "Party9Recomp-Game.exe"; }
 
 bool built(const fs::path& dir, const std::string& dol_hash, Mode* mode) {
     if (!fs::exists(game_exe(dir))) return false;
@@ -435,7 +442,7 @@ std::string build(const fs::path& dir, const fs::path& main_dol, const std::stri
         say("Translating your game's code (this part takes seconds)...");
         // It runs in its own output folder, as it may write beside where it runs.
         int code = run(dir, work / "recomp", quote(dir / "builder" / "dolrecomp.exe") + L" --cpu broadway -j" + std::to_wstring(jobs) + L" " +
-                                quote(main_dol) + L" SUPE01 " + quote(work / "recomp"), nullptr);
+                                quote(main_dol) + L" SSQE01 " + quote(work / "recomp"), nullptr);
         if (code != 0) return "The translator stopped (exit code " + std::to_string(code) + "). See build-log.txt.";
         say("Adding the runtime's hooks...");
         std::string problem = add_hooks(dir);

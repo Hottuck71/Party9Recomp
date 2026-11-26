@@ -768,13 +768,13 @@ static void speed_report(u32 field) {
     if (slowest == me) snprintf(who, sizeof who, "this PC");
     else snprintf(who, sizeof who, "player %u's PC", slowest + 1);
     if (fps >= 57 || !someone_waits)
-        snprintf(title, sizeof title, "Wii Party - online, player %u of %u - %u fps - running smoothly - input delay %u ms",
+        snprintf(title, sizeof title, "Mario Party 9 - online, player %u of %u - %u fps - running smoothly - input delay %u ms",
                  me + 1, players, fps, (u32)(delay * 16.683 + 0.5));
     else if (everyone_waits)
-        snprintf(title, sizeof title, "Wii Party - online, player %u of %u - %u fps - every PC waits: the connection "
+        snprintf(title, sizeof title, "Mario Party 9 - online, player %u of %u - %u fps - every PC waits: the connection "
                  "is the slow part - input delay %u ms", me + 1, players, fps, (u32)(delay * 16.683 + 0.5));
     else
-        snprintf(title, sizeof title, "Wii Party - online, player %u of %u - %u fps - waiting for %s (it waits %u%%, "
+        snprintf(title, sizeof title, "Mario Party 9 - online, player %u of %u - %u fps - waiting for %s (it waits %u%%, "
                  "this PC %u%%)", me + 1, players, fps, who, waits[slowest], waits[me]);
     glue_set_title(title);
     if ((field / STATS_EVERY) % 5 == 0) { /* every 10 seconds in the report */

@@ -16,7 +16,7 @@ WORK := build
 SRC := $(TK)/src
 GEN := $(WORK)/recomp/generated
 OBJ := $(WORK)/obj
-EXE ?= PartyRecomp-Game.exe
+EXE ?= Party9Recomp-Game.exe
 VERSION ?= dev
 # The bundled GCC was built for MSYS2's own folder; --sysroot tells it where its headers and libraries are now.
 CC := gcc --sysroot=$(TK)/toolchain
@@ -65,7 +65,7 @@ $(OBJ)/rel_table.o: $(WORK)/rel/rel_table.c $(SRC)/rel.h | $(OBJ)
 	$(CC) $(COMMON) -c $< -o $@
 
 $(OBJ)/host_%.o: $(SRC)/%.c $(wildcard $(SRC)/*.h) | $(OBJ)
-	$(CC) $(COMMON) -Dmain=aurora_main "-DRR_BUILD_ID=\"PartyRecomp $(VERSION)\"" -c $< -o $@
+	$(CC) $(COMMON) -Dmain=aurora_main "-DRR_BUILD_ID=\"Party9Recomp $(VERSION)\"" -c $< -o $@
 
 $(OBJ)/cpu_core.o: $(TK)/dolrecomp/cpu_core.c | $(OBJ)
 	$(CC) $(COMMON) -I$(TK)/dolrecomp/cpu -c $< -o $@
