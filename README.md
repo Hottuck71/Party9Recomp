@@ -47,8 +47,9 @@ the keyboard and mouse always play as player 1 too.
   the screen. Gamepad A = 2 (OK), B = 1 (back), X = A, Y or right trigger = B, Start = +, Back = −, Guide = HOME,
   right stick = pointer, left bumper = shake, left trigger + left stick = tilt. Keyboard: arrows, Z = 2, X = 1.
   F8 or a press of the left stick switches to upright.
-- **Nintendo Switch Joy-Cons**, each one a Wii Remote Plus of its own: pair them with Windows once (hold the sync
-  button on the rail, then **Settings > Bluetooth & devices > Add device**) and they take seats as they connect,
+- **Nintendo Switch Joy-Cons**, each one a Wii Remote Plus of its own: pair them once on the launcher's **Joy-Con** tab
+  (its own tab, apart from the Wii Remote one: hold the sync button on the rail until the lights move, then click
+  **The lights are moving**; it also tests them) and they take seats as they connect,
   after any Wii Remotes. Hold one sideways like a sideways Wii Remote, stick on the left: the bottom face button
   is 2 (OK), the right one 1 (back), the left one A, the top one B, the stick is the d-pad, SL = −, SR = +,
   HOME/Capture = HOME. Tilting and shaking work, and rumble and player lights. **SL and SR together** (or F8)
