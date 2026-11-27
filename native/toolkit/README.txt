@@ -54,6 +54,15 @@ in: a Wii Remote Plus or MotionPlus points with its gyro. Hold it still for a
 moment after it connects, then point at the middle of the screen and press A
 to centre it. C re-centres, F9 / F10 flip left-right / up-down.
 
+Nintendo Switch Joy-Cons: pair them once (Launcher > Joy-Con tab: hold the
+sync button on the rail until the lights move, then click "The lights are
+moving"). Each Joy-Con is a Wii Remote of its own, seated after Wii Remotes
+and before gamepads. Hold it sideways, stick on the left:
+  bottom button = 2 (OK)   right = 1 (back)   left = A   top = B
+  stick = d-pad   SL = -   SR = +   HOME / Capture = HOME
+Tilting and shaking work. SL and SR together (or F8) switch to upright, where
+it points with its gyro: right Joy-Con A = A, ZR = B, Y = 1, B = 2.
+
 SIDEWAYS CONTROLS (on by default)
 Mario Party 9 is played with the Wii Remote held sideways, so gamepads and the
 keyboard act as a sideways remote: the d-pad matches the screen, and
@@ -121,6 +130,7 @@ WHAT'S IN THIS FOLDER
 ---------------------
 Launcher.exe            the launcher
 PairRemote.exe          pairs a Wii Remote with Windows
+PairJoyCon.exe          pairs Nintendo Switch Joy-Cons with Windows
 builder\                the translator (DolRecomp), the runtime as source,
                         the graphics library, and a C compiler (GCC)
 relay\                  the online room server, and how to run it
