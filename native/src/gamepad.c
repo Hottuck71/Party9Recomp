@@ -28,6 +28,7 @@
 #include <SDL3/SDL_stdinc.h>
 #include <SDL3/SDL_timer.h>
 #include "gamepad.h"
+#include "joycon.h"
 
 extern FILE* report;
 
@@ -70,7 +71,10 @@ static Uint64 last_ns;
 static u32 seen, frames_with_input, turns_switched;
 static volatile int sideways = 1;
 
-void gamepad_set_sideways(int on) { sideways = on != 0; }
+void gamepad_set_sideways(int on) {
+    sideways = on != 0;
+    joycon_set_sideways(sideways); /* Joy-Cons turn with them */
+}
 int gamepad_sideways(void) { return sideways; }
 
 /* Upright Wii Remote buttons, as a sideways remote's would be pressed for the same thing on the screen. */
@@ -100,6 +104,7 @@ u32 gamepad_turn_keyboard(u32 b) {
 
 static void switch_turn(const char* by) {
     sideways = !sideways;
+    joycon_set_sideways(sideways);
     turns_switched++;
     fprintf(report, "Controls: %s (%s)\n", sideways ? "sideways" : "upright", by);
     fflush(report);
@@ -141,6 +146,9 @@ static void open_new_pads(void) {
         for (int s = 0; s < GAMEPAD_SLOTS && slot < 0; s++)
             if (!pads[s].pad) slot = s;
         if (slot < 0) break;
+        if (SDL_GetGamepadVendorForID(ids[i]) == 0x057E &&
+            (SDL_GetGamepadProductForID(ids[i]) == 0x2006 || SDL_GetGamepadProductForID(ids[i]) == 0x2007))
+            continue; /* a Joy-Con: joycon.c drives it as a Wii Remote */
         SDL_Gamepad* g = SDL_OpenGamepad(ids[i]);
         if (!g) continue;
         Pad* p = &pads[slot];
