@@ -1233,9 +1233,11 @@ static void add_mouse_pointer(u8* r) {
     else put_ir10(ir);
 }
 
-/* A real remote with no sensor bar in view reports no IR points. The mouse fills in then, but only for a
-   moment after it moves: a pointer held still in one place while the real remote turns would pull the
-   game's MotionPlus heading toward that spot, as it uses the pointer to correct drift. */
+/* A real remote with no sensor bar in view reports no IR points. The mouse fills in then, from when it moves until
+   the remote's own pointer moves (fake_remote_mouse_aims): a mouse pointer held still while the real remote turns
+   would pull the game's MotionPlus heading toward that spot, as it uses the pointer to correct drift. The remote's
+   own pointer is its MotionPlus one, or its tilt one while no MotionPlus data comes (Wii Party and Mario Party 9
+   leave MotionPlus off, and a plain remote has none). */
 static void add_mouse_pointer_real(u8* r, double when) {
     motion_pointer_feed(r, when);
     u8* ir = NULL;
@@ -1254,7 +1256,7 @@ static void add_mouse_pointer_real(u8* r, double when) {
     static int a_held;
     int a_pressed = (r[2] & 0x08) && !a_held;
     a_held = (r[2] & 0x08) != 0;
-    int motion_on = motion_pointer_get(&x, &y);
+    int motion_on = motion_pointer_for_report(r, &x, &y);
     if (fake_remote_mouse_aims(R->ir_on && motion_on, x, y)) {
         ir_from_mouse++;
         add_mouse_pointer(r);
